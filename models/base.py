@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 
-from utils.containers import LearningParameters
+from utils.containers import LearningParameters, DiffusionParameters
+from loss.base import LossAggregator
 
 
 class BaseLightningModule(pl.LightningModule):
@@ -14,9 +14,9 @@ class BaseLightningModule(pl.LightningModule):
         self,
         base_model: nn.Module,
         learning_params: LearningParameters,
-        loss_aggregator=None,
+        loss_aggregator: LossAggregator = None,
         optimizer: torch.optim.Optimizer = None,
-        scheduler: torch.optim.lr_scheduler = None,
+        scheduler: Any = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -29,7 +29,7 @@ class BaseLightningModule(pl.LightningModule):
         self.loss_aggregator = loss_aggregator
 
     @abstractmethod
-    def forward(self, x: Dict[str, Any]) -> object:
+    def forward(self, x: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         ...
 
     def _configure_scheduler_settings(
@@ -53,3 +53,64 @@ class BaseLightningModule(pl.LightningModule):
                 self.learning_params.frequency,
             )
             return [self.optimizer], [scheduler_settings]
+
+
+class DiffusionScheduler(ABC):
+    betas: torch.Tensor
+    alphas: torch.Tensor
+    alphas_cumprod: torch.Tensor
+    alphas_cumprod_prev: torch.Tensor
+    sqrt_recip_alphas: torch.Tensor
+    sqrt_alphas_cumprod: torch.Tensor
+    sqrt_one_minus_alphas_cumprod: torch.Tensor
+    posterior_variance: torch.Tensor
+
+    @abstractmethod
+    def __init__(self, num_steps: int) -> None:
+        ...
+
+
+class BaseDiffusionModel(BaseLightningModule):
+    def __init__(
+        self,
+        base_model: nn.Module,
+        learning_params: LearningParameters,
+        diffusion_params: DiffusionParameters,
+        loss_aggregator: LossAggregator = None,
+        optimizer: torch.optim.Optimizer = None,
+        scheduler: Any = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            base_model, learning_params, loss_aggregator, optimizer, scheduler, **kwargs
+        )
+        self.diffusion_params = diffusion_params
+
+    @abstractmethod
+    def forward(
+        self, x: Dict[str, torch.Tensor], t: torch.Tensor, cond: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        ...
+
+    @abstractmethod
+    def get_loss(self, x_0: Dict[str, torch.Tensor], t: torch.Tensor) -> torch.Tensor:
+        ...
+
+    @abstractmethod
+    def sample_timestep(
+        self,
+        x: Dict[str, torch.Tensor],
+        t: torch.Tensor,
+        cond: Dict[str, torch.Tensor] = {},
+        verbose: bool = False,
+    ) -> Dict[str, torch.Tensor]:
+        ...
+
+    @abstractmethod
+    def denoise(
+        self,
+        noisy_input: Dict[str, torch.Tensor],
+        cond: Dict[str, torch.Tensor] = {},
+        show_process_plots: bool = False,
+    ) -> Dict[str, torch.Tensor]:
+        ...

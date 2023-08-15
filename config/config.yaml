@@ -13,6 +13,7 @@ learning:
   amp: False
   num_devices: 1
   num_workers: 0
+  val_split: 0.01
 
   loss_monitor: "step"
   interval: "training_total_loss"

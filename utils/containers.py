@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import torch
+from models.base import DiffusionScheduler
 
 
 @dataclass
@@ -32,6 +33,7 @@ class LearningParameters:
     amp: bool
     num_devices: int = 1
     num_workers: int = 0
+    val_split: float
 
     # Scheduler settings
     loss_monitor: str = "step"
@@ -47,4 +49,20 @@ class MusicDatasetParameters:
     preload: bool
     device: str = "cpu"
     preload_data_path: str
-    preload_metadata_path: str
+
+
+@dataclass
+class DiffusionParameters:
+    scheduler: DiffusionScheduler
+    num_steps: int
+
+
+@dataclass
+class MelSpecParameters:
+    n_fft: int
+    hop_length: int
+    n_mels: int
+    pad_mode: str = "reflect"
+    power: float
+    norm: str = "slaney"
+    mel_scale: str = "htk"
