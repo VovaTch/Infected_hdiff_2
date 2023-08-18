@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Dict, Any
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 
@@ -79,29 +79,79 @@ class MusicDataset(Dataset):
 
 
 class MelSpecMusicDataset(MusicDataset):
+    """
+    Extension of the MusicDataset abstract class, designed to get also the mel-spectrogram parameters object.
+    """
+
     def __init__(
         self, dataset_params: MusicDatasetParameters, mel_spec_params: MelSpecParameters
     ) -> None:
+        """
+        Args:
+            *   dataset_params (MusicDatasetParameters): Dataset parameters object
+            *   mel_spec_params (MelSpecParameters): mel-spectrogram parameters object
+        """
         super().__init__(dataset_params)
         self.mel_spec_params = mel_spec_params
 
 
 class MusicDataModule(pl.LightningDataModule):
+    """
+    Base class for a lightning data module implementation, specific for this project.
+    """
+
     def __init__(
         self, learning_params: LearningParameters, dataset: MusicDataset
     ) -> None:
+        """
+        Args:
+            *   learning_params (LearningParameters): Learning parameters object
+            *   dataset (MusicDataset): Dataset parameters object
+        """
         super().__init__()
         self.learning_params = learning_params
         self.dataset = dataset
 
     @abstractmethod
     def setup(self, stage: str) -> None:
+        """
+        The setup method from the lightning module.
+
+        Args:
+            *   stage (str): Current stage, supporting 'fit', 'val', 'test', 'pred'.
+        """
         ...
 
     @abstractmethod
     def train_dataloader(self) -> TRAIN_DATALOADERS:
+        """
+        The train dataloader method from the lightning module.
+
+        Returns:
+            *   TRAIN_DATALOADERS: Training dataloader
+        """
         ...
 
     @abstractmethod
     def val_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        The validation dataloader method from the lightning module.
+
+        Returns:
+            EVAL_DATALOADERS: Validation dataloader
+        """
+        ...
+
+
+class IMusicDatasetFactory(ABC):
+    @staticmethod
+    @abstractmethod
+    def build_music_dataset(dataset_params: MusicDatasetParameters) -> MusicDataset:
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def build_music_data_module(
+        dataset_params: MusicDatasetParameters, learning_params: LearningParameters
+    ) -> MusicDataModule:
         ...

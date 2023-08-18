@@ -18,3 +18,13 @@ learning:
   loss_monitor: "step"
   interval: "training_total_loss"
   frequency: 1
+
+dataset:
+  dataset_type: "music_dataset"
+  data_module_type: "basic"
+  sample_rate: 44100
+  data_dir: "data"
+  slice_length: 262144
+  preload: True
+  device: "cpu"
+  preload_data_dir: "data"

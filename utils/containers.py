@@ -43,6 +43,8 @@ class LearningParameters:
 
 @dataclass
 class MusicDatasetParameters:
+    dataset_type: str
+    data_module_type: str
     sample_rate: int
     data_dir: str
     slice_length: int
