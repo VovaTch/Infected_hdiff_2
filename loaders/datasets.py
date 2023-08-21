@@ -25,20 +25,24 @@ class MP3MelSpecDataset(MusicDataset):
         if os.path.exists(slices_path):
             self.buffer = self._load_data(dataset_params.data_dir)
         else:
-            os.makedirs(dataset_params.data_dir)
+            if not os.path.exists(dataset_params.data_dir):
+                os.makedirs(dataset_params.data_dir)
             self._generate_data()
             self._dump_data(dataset_params.data_dir)
 
     def _generate_data(self):
         # Create mp3 file list
         self.file_list = []
-        for file in os.listdir(self.dataset_params.data_dir):
-            if file.endswith("mp3"):
-                self.file_list.append(os.path.join(self.dataset_params.data_dir, file))
+        for subdir, _, files in os.walk(self.dataset_params.data_dir):
+            for file in files:
+                if file.endswith(".mp3"):
+                    self.file_list.append(os.path.join(subdir, file))
 
         # Initialize mel spectrogram
-        for file in tqdm.tqdm(self.file_list, "Loading data from files..."):
-            file_data = self._load_data_from_track(file)
+        for idx, file in tqdm.tqdm(
+            enumerate(self.file_list), "Loading data from files..."
+        ):
+            file_data = self._load_data_from_track(file, idx)
 
             # Append to the buffer
             for key, value in file_data.items():
@@ -47,27 +51,34 @@ class MP3MelSpecDataset(MusicDataset):
                 else:
                     self.buffer[key] = value
 
-    def _load_data_from_track(self, file: str) -> Dict[str, Any]:
+    def _load_data_from_track(self, file: str, track_idx: int) -> Dict[str, Any]:
         long_data, sr = torchaudio.load(file, format="mp3")
         long_data = self._resample_if_necessary(long_data, sr)
         long_data = self._mix_down_if_necessary(long_data)
         long_data = self._right_pad_if_necessary(long_data)
-        slices = long_data.view((-1, 1, self.slice_length))
-        slice_file_name = "slices_" + file[:-4] + ".pt"
+        slices = long_data.view((-1, 1, self.slice_length)).half()
+        slice_file_name = "slices_" + file.split("/")[-1][:-4] + ".pt"
+        slice_file_name = slice_file_name.replace(" ", "_")
 
         # Make the data fit into the buffer
         slices_list = [ind_slice.to(self.device) for ind_slice in slices]
-        track_name = [file for _ in range(slices.shape[0])]
+        track_name_list = [file.split("/")[-1] for _ in range(slices.shape[0])]
+        track_idx_list = [track_idx for _ in range(slices.shape[0])]
         slice_file_name_list = [slice_file_name for _ in range(slices.shape[0])]
         slice_idx = [idx for idx in range(slices.shape[0])]
-        slice_init_time = [idx * self.slice_length for idx in range(slices.shape[0])]
+        slice_init_idx = [idx * self.slice_length for idx in range(slices.shape[0])]
+        slice_init_time = [
+            idx * self.slice_length / self.sample_rate for idx in range(slices.shape[0])
+        ]
 
         # Aggregate all data in a dictionary
         data = {
             "slice": slices_list,
             "slice_file_name": slice_file_name_list,
-            "track_name": track_name,
+            "track_name": track_name_list,
+            "track_idx": track_idx_list,
             "slice_idx": slice_idx,
+            "slice_init_idx": slice_init_idx,
             "slice_init_time": slice_init_time,
         }
 
@@ -101,22 +112,24 @@ class MP3MelSpecDataset(MusicDataset):
         metadata_path = os.path.join(path, "metadata.json")
         metadata_for_json = [
             {key: value[idx] for (key, value) in self.buffer.items() if key != "slice"}
-            for idx in range(len(self.buffer["slices"]))
+            for idx in range(len(self.buffer["slice"]))
         ]
         with open(metadata_path, "w") as f:
-            f.write(metadata_for_json)
+            json.dump(metadata_for_json, f, indent=4)
 
         for file in tqdm.tqdm(self.file_list, "Saving slices as .pt files..."):
             aggregate_slices = [
-                self.buffer["slices"][idx]
-                for idx in range(len(self.buffer["slices"]))
-                if self.buffer["track_name"] == file
+                self.buffer["slice"][idx]
+                for idx in range(len(self.buffer["slice"]))
+                if self.buffer["track_name"][idx] == file.split("/")[-1]
             ]
             aggregate_slices_torch = torch.stack(aggregate_slices, dim=0)
-            slice_file_name = "slices_" + file[:-4] + ".pt"
+            slice_file_name = "slices_" + file.split("/")[-1][:-4] + ".pt"
+            slice_file_name = slice_file_name.replace(" ", "_")
+            slice_file_path = os.path.join(slice_data_path, slice_file_name)
 
             # Saving this as a .pt file
-            torch.save(aggregate_slices_torch, slice_file_name)
+            torch.save(aggregate_slices_torch, slice_file_path)
 
     def _load_data(self, path: str) -> None:
         json_file_path = os.path.join(path, "metadata.json")
@@ -125,7 +138,7 @@ class MP3MelSpecDataset(MusicDataset):
 
         # Reorganize the metadata file as a buffer
         for datapoint in metadata:
-            for key, value in datapoint:
+            for key, value in datapoint.items():
                 # Convert to the correct device
                 if isinstance(value, torch.Tensor):
                     value = value.to(self.device)
@@ -135,6 +148,8 @@ class MP3MelSpecDataset(MusicDataset):
                     self.buffer[key] = [value]
                 else:
                     self.buffer[key] += [value]
+
+        # TODO: Load the slices
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
         datapoint = {key: value[index] for (key, value) in self.buffer.items()}

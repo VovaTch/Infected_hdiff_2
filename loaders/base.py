@@ -17,7 +17,7 @@ class MusicDataset(Dataset):
     Music dataset interface, inherits from Pytorch's Dataset class.
     """
 
-    buffer: Dict[str, Any]
+    buffer: Dict[str, Any] = {}
 
     def __init__(self, dataset_params: MusicDatasetParameters) -> None:
         """
@@ -62,7 +62,11 @@ class MusicDataset(Dataset):
         Returns:
             int: Dataset length
         """
-        return len(list(self.buffer.values())[0])
+
+        if self.buffer is None or len(self.buffer) == 0:
+            return 0
+        else:
+            return len(list(self.buffer.values())[0])
 
     @abstractmethod
     def __getitem__(self, index: int) -> Dict[str, Any]:

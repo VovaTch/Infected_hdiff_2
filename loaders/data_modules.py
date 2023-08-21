@@ -8,7 +8,7 @@ class BasicMusicDataModule(MusicDataModule):
     def __init__(
         self, learning_params: LearningParameters, dataset: MusicDataset
     ) -> None:
-        super().__init__()
+        super().__init__(learning_params, dataset)
         self.learning_params = learning_params
         self.dataset = dataset
 

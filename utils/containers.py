@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import torch
-from models.base import DiffusionScheduler
+
+if TYPE_CHECKING:
+    from models.base import DiffusionScheduler
 
 
 @dataclass
@@ -31,9 +34,9 @@ class LearningParameters:
     save_path: str
     eval_split_factor: float
     amp: bool
+    val_split: float
     num_devices: int = 1
     num_workers: int = 0
-    val_split: float
 
     # Scheduler settings
     loss_monitor: str = "step"
@@ -49,13 +52,13 @@ class MusicDatasetParameters:
     data_dir: str
     slice_length: int
     preload: bool
+    preload_data_dir: str
     device: str = "cpu"
-    preload_data_path: str
 
 
 @dataclass
 class DiffusionParameters:
-    scheduler: DiffusionScheduler
+    scheduler: "DiffusionScheduler"
     num_steps: int
 
 
@@ -64,7 +67,7 @@ class MelSpecParameters:
     n_fft: int
     hop_length: int
     n_mels: int
-    pad_mode: str = "reflect"
     power: float
+    pad_mode: str = "reflect"
     norm: str = "slaney"
     mel_scale: str = "htk"

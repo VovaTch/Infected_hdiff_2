@@ -6,7 +6,7 @@ from .base import MusicDataset, MusicDataModule, IMusicDatasetFactory
 import loaders.data_modules as data_modules
 import loaders.datasets as datasets
 
-DATASETS: Dict[str, MusicDataset] = {"music_dataset": datasets.MusicDataset}
+DATASETS: Dict[str, MusicDataset] = {"music_dataset": datasets.MP3MelSpecDataset}
 
 DATAMODULES: Dict[str, MusicDataModule] = {"basic": data_modules.BasicMusicDataModule}
 

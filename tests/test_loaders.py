@@ -22,10 +22,11 @@ class TestLoaders(unittest.TestCase):
         )
 
     def test_data_loading(self):
+        self.data_module.setup("fit")
         train_dataloader = self.data_module.train_dataloader()
         for batch in train_dataloader:
             break
-        self.assertEqual(len(batch), 1)
+        self.assertEqual(len(batch["slice"]), 3)
 
 
 if __name__ == "__main__":
