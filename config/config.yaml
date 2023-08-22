@@ -28,3 +28,13 @@ dataset:
   preload: True
   device: "cpu"
   preload_data_dir: "data"
+
+image_mel_spec_params:
+  n_fft: 2048
+  hop_length: 512
+  n_mels: 128
+  power: 0.5
+  f_min: 20
+  pad_mode: "reflect"
+  norm: "slaney"
+  mel_scale: "htk"

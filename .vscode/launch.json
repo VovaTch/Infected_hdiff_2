@@ -16,7 +16,7 @@
             "name": "Python: Specific Test",
             "type": "python",
             "request": "launch",
-            "module": "tests.test_loaders",
+            "module": "tests.test_mel_spec_converters",
             "console": "integratedTerminal",
             "justMyCode": true
         },

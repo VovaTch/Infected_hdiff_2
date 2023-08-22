@@ -4,8 +4,9 @@ from typing import Dict, Any, Optional
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
+from torchaudio.transforms import MelSpectrogram
 
-from utils.containers import LearningParameters, DiffusionParameters
+from utils.containers import LearningParameters, DiffusionParameters, MelSpecParameters
 from loss.base import LossAggregator
 
 
@@ -70,6 +71,18 @@ class DiffusionScheduler(ABC):
         ...
 
 
+class MelSpecConverter(ABC):
+    mel_spec: MelSpectrogram
+
+    @abstractmethod
+    def __init__(self, mel_spec_params: MelSpecParameters) -> None:
+        ...
+
+    @abstractmethod
+    def convert(self, slice: torch.Tensor) -> torch.Tensor:
+        ...
+
+
 class BaseDiffusionModel(BaseLightningModule):
     def __init__(
         self,
@@ -113,4 +126,13 @@ class BaseDiffusionModel(BaseLightningModule):
         cond: Dict[str, torch.Tensor] = {},
         show_process_plots: bool = False,
     ) -> Dict[str, torch.Tensor]:
+        ...
+
+
+class IMelSpecConverterFactory(ABC):
+    @staticmethod
+    @abstractmethod
+    def build_mel_spec_converter(
+        type: str, mel_spec_params: MelSpecParameters
+    ) -> MelSpecConverter:
         ...

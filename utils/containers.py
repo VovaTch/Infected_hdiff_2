@@ -68,6 +68,7 @@ class MelSpecParameters:
     hop_length: int
     n_mels: int
     power: float
+    f_min: float
     pad_mode: str = "reflect"
     norm: str = "slaney"
     mel_scale: str = "htk"

@@ -23,7 +23,7 @@ class MP3MelSpecDataset(MusicDataset):
         # Check if the data is loaded
         slices_path = os.path.join(dataset_params.data_dir, "slices")
         if os.path.exists(slices_path):
-            self.buffer = self._load_data(dataset_params.data_dir)
+            self._load_data(dataset_params.data_dir)
         else:
             if not os.path.exists(dataset_params.data_dir):
                 os.makedirs(dataset_params.data_dir)
