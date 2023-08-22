@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
 
 import torch
@@ -149,7 +149,13 @@ class MP3MelSpecDataset(MusicDataset):
                 else:
                     self.buffer[key] += [value]
 
-        # TODO: Load the slices
+        # Load the slices
+        slice_file_paths = self._create_slice_file_list(path, metadata)
+        for file_path in tqdm.tqdm(slice_file_paths, "Parsing slices to buffer..."):
+            slices = torch.load(file_path)
+            self._parse_slices_to_buffer(slices.float())
+
+        print("Parsed metadata and the slices to the buffer")
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
         datapoint = {key: value[index] for (key, value) in self.buffer.items()}
@@ -158,3 +164,28 @@ class MP3MelSpecDataset(MusicDataset):
                 value = value.to(self.device)
 
         return datapoint
+
+    @staticmethod
+    def _create_slice_file_list(
+        root_data_path: str, metadata: Dict[str, Any]
+    ) -> List[str]:
+        slice_file_names = []
+        current_file_name = None
+        for data_point in metadata:
+            if data_point["slice_file_name"] != current_file_name:
+                slice_file_names.append(data_point["slice_file_name"])
+                current_file_name = data_point["slice_file_name"]
+
+        # Create the paths
+        slice_file_paths = [
+            os.path.join(root_data_path, "slices", ind_file_name)
+            for ind_file_name in slice_file_names
+        ]
+        return slice_file_paths
+
+    def _parse_slices_to_buffer(self, slices: torch.Tensor) -> None:
+        for slice in slices:
+            if "slice" not in self.buffer:
+                self.buffer["slice"] = [slice]
+            else:
+                self.buffer["slice"] += [slice]
