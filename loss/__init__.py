@@ -1,1 +1,7 @@
-from .base import LOSS_MODULES, LossComponent, LossAggregator
+from .base import LossComponent, LossAggregator
+from .build import (
+    LOSS_AGGREGATORS,
+    LOSS_COMPONENTS,
+    LOSS_MODULES,
+    LossAggregatorFactory,
+)

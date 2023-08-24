@@ -10,6 +10,7 @@ from utils.containers import (
     LearningParameters,
     MelSpecParameters,
 )
+from models import MelSpecConverter
 
 
 class MusicDataset(Dataset):
@@ -82,21 +83,23 @@ class MusicDataset(Dataset):
         ...
 
 
-class MelSpecMusicDataset(MusicDataset):
+class MelSpecMusicDataset(ABC):
     """
-    Extension of the MusicDataset abstract class, designed to get also the mel-spectrogram parameters object.
+    Designed as a wrapper dataset around the the base dataset that outputs also mel spectrogram of the data
     """
 
     def __init__(
-        self, dataset_params: MusicDatasetParameters, mel_spec_params: MelSpecParameters
+        self,
+        base_dataset: MusicDataset,
+        mel_spec_converter: MelSpecConverter,
     ) -> None:
         """
         Args:
-            *   dataset_params (MusicDatasetParameters): Dataset parameters object
-            *   mel_spec_params (MelSpecParameters): mel-spectrogram parameters object
+            *   dataset_params (MusicDataset): Base dataset
+            *   mel_spec_params (MelSpecParameters): mel-spectrogram converter object
         """
-        super().__init__(dataset_params)
-        self.mel_spec_params = mel_spec_params
+        self.base_dataset = base_dataset
+        self.mel_spec_converter = mel_spec_converter
 
 
 class MusicDataModule(pl.LightningDataModule):
@@ -155,7 +158,23 @@ class IMusicDatasetFactory(ABC):
 
     @staticmethod
     @abstractmethod
+    def build_mel_spec_dataset(
+        dataset_params: MusicDatasetParameters, mel_spec_params: MelSpecParameters
+    ) -> MelSpecMusicDataset:
+        ...
+
+    @staticmethod
+    @abstractmethod
     def build_music_data_module(
         dataset_params: MusicDatasetParameters, learning_params: LearningParameters
+    ) -> MusicDataModule:
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def build_mel_spec_module(
+        dataset_params: MusicDatasetParameters,
+        learning_params: LearningParameters,
+        mel_spec_params: MelSpecParameters,
     ) -> MusicDataModule:
         ...

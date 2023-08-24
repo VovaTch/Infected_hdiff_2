@@ -9,7 +9,7 @@ from utils.containers import MusicDatasetParameters, LearningParameters
 class TestLoaders(unittest.TestCase):
     def setUp(self) -> None:
         # Load config
-        cfg_path = "config/config.yaml"
+        cfg_path = "config/test_config.yaml"
         with open(cfg_path, "r") as f:
             self.cfg = yaml.safe_load(f)
 

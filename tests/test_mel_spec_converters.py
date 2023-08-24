@@ -10,7 +10,7 @@ from loaders import MusicDatasetFactory
 
 class TestMelSpecConvertor(unittest.TestCase):
     def setUp(self) -> None:
-        self.cfg = load_config("config/config.yaml")
+        self.cfg = load_config("config/test_config.yaml")
         dataset_params = MusicDatasetParameters(**self.cfg["dataset"])
         self.slice_dataset = MusicDatasetFactory.build_music_dataset(dataset_params)
         self.slice_dataloader = DataLoader(

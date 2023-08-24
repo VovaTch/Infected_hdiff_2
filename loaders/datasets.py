@@ -7,11 +7,13 @@ import torch.nn.functional as F
 import torchaudio
 import tqdm
 
-from .base import MusicDataset
-from utils.containers import MusicDatasetParameters
+from models import MelSpecConverter
+
+from .base import MusicDataset, MelSpecMusicDataset
+from utils.containers import MelSpecParameters, MusicDatasetParameters
 
 
-class MP3MelSpecDataset(MusicDataset):
+class MP3SliceDataset(MusicDataset):
     def __init__(self, dataset_params: MusicDatasetParameters) -> None:
         super().__init__(dataset_params)
 
@@ -189,3 +191,21 @@ class MP3MelSpecDataset(MusicDataset):
                 self.buffer["slice"] = [slice]
             else:
                 self.buffer["slice"] += [slice]
+
+
+class MP3MelSpecDataset(MelSpecMusicDataset):
+    def _dump_data(self, path: str) -> None:
+        self.base_dataset._dump_data(path)
+
+    def _load_data(self, path: str) -> None:
+        self.base_dataset._load_data(path)
+
+    def _save_data(self, data: Dict[str, Any]) -> None:
+        self.base_dataset._save_data(data)
+
+    def __getitem__(self, index: int) -> Dict[str, Any]:
+        data_point = super().__getitem__(index)
+        data_point.update(
+            {"mel_spec": self.mel_spec_converter.convert(data_point["slice"])}
+        )
+        return data_point

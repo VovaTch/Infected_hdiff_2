@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, TYPE_CHECKING
 
 import pytorch_lightning as pl
 import torch
@@ -7,7 +7,9 @@ import torch.nn as nn
 from torchaudio.transforms import MelSpectrogram
 
 from utils.containers import LearningParameters, DiffusionParameters, MelSpecParameters
-from loss.base import LossAggregator
+
+if TYPE_CHECKING:
+    from loss.base import LossAggregator
 
 
 class BaseLightningModule(pl.LightningModule):
@@ -15,7 +17,7 @@ class BaseLightningModule(pl.LightningModule):
         self,
         base_model: nn.Module,
         learning_params: LearningParameters,
-        loss_aggregator: LossAggregator = None,
+        loss_aggregator: "LossAggregator" = None,
         optimizer: torch.optim.Optimizer = None,
         scheduler: Any = None,
         **kwargs,
@@ -89,7 +91,7 @@ class BaseDiffusionModel(BaseLightningModule):
         base_model: nn.Module,
         learning_params: LearningParameters,
         diffusion_params: DiffusionParameters,
-        loss_aggregator: LossAggregator = None,
+        loss_aggregator: "LossAggregator" = None,
         optimizer: torch.optim.Optimizer = None,
         scheduler: Any = None,
         **kwargs,
