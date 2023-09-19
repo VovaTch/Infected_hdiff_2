@@ -1,14 +1,64 @@
+from dataclasses import dataclass
+from typing import Protocol
+
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader, random_split
+import pytorch_lightning as pl
 
-from .base import MusicDataModule, MusicDataset
 from utils.containers import LearningParameters
+from .datasets import MusicDataset
 
 
-class BasicMusicDataModule(MusicDataModule):
+class MusicDataModule(Protocol):
+    """
+    Base class for a lightning data module implementation, specific for this project.
+    """
+
     def __init__(
         self, learning_params: LearningParameters, dataset: MusicDataset
     ) -> None:
-        super().__init__(learning_params, dataset)
+        """
+        Constructor for the music data module
+
+        Args:
+            learning_params (LearningParameters): Learning parameter object
+            dataset (MusicDataset): Dataset object
+        """
+        ...
+
+    def setup(self, stage: str) -> None:
+        """
+        The setup method from the lightning module.
+
+        Args:
+            *   stage (str): Current stage, supporting 'fit', 'val', 'test', 'pred'.
+        """
+        ...
+
+    def train_dataloader(self) -> TRAIN_DATALOADERS:
+        """
+        The train dataloader method from the lightning module.
+
+        Returns:
+            *   TRAIN_DATALOADERS: Training dataloader
+        """
+        ...
+
+    def val_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        The validation dataloader method from the lightning module.
+
+        Returns:
+            EVAL_DATALOADERS: Validation dataloader
+        """
+        ...
+
+
+class BasicMusicDataModule(pl.LightningModule):
+    def __init__(
+        self, learning_params: LearningParameters, dataset: MusicDataset
+    ) -> None:
+        super().__init__()
         self.learning_params = learning_params
         self.dataset = dataset
 
@@ -18,15 +68,15 @@ class BasicMusicDataModule(MusicDataModule):
         val_len = len(self.dataset) - training_len
 
         self.train_dataset, self.val_dataset = random_split(
-            self.dataset, lengths=(training_len, val_len)
+            self.dataset, lengths=(training_len, val_len)  # type: ignore
         )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
             self.train_dataset, batch_size=self.learning_params.batch_size, shuffle=True
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             self.val_dataset, batch_size=self.learning_params.batch_size, shuffle=False
         )

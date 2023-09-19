@@ -1,27 +1,22 @@
-import unittest
+import pytest
 
 import torch
 
-from loss import LossAggregatorFactory
+from loss import build_loss_aggregator
 from utils.others import load_config
 
 
-class TestLoss(unittest.TestCase):
-    def setUp(self) -> None:
-        self.cfg = load_config("config/test_config.yaml")
+def test_loss():
+    cfg = load_config("config/test_config.yaml")
+    loss_agg = build_loss_aggregator(cfg)
 
-    def test_loss_aggregation(self):
-        loss_agg = LossAggregatorFactory.build_loss_aggregator(self.cfg["loss"])
-        self.assertEqual(len(loss_agg.loss_components), 6)
+    assert len(loss_agg.components) == 6
 
-        slice_ref = torch.randn((3, 1, 2048))
-        slice_est = torch.randn((3, 1, 2048))
-        ref = {"slice": slice_ref}
-        est = {"slice": slice_est}
+    slice_ref = torch.randn((3, 1, 2048))
+    slice_est = torch.randn((3, 1, 2048))
+    ref = {"slice": slice_ref}
+    est = {"slice": slice_est}
 
-        loss = loss_agg(est, ref)
-        self.assertEqual(len(loss), 7)
+    loss = loss_agg.compute(est, ref)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    assert len(loss.individuals) == 6

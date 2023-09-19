@@ -1,22 +1,46 @@
+from dataclasses import dataclass
 import os
-from typing import Dict, Any, List
+from typing import Any, Protocol
 import json
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import Dataset
 import torchaudio
 import tqdm
 
-from models import MelSpecConverter
-
-from .base import MusicDataset, MelSpecMusicDataset
-from utils.containers import MelSpecParameters, MusicDatasetParameters
+from models.mel_spec_converters import MelSpecConverter
+from utils.containers import MusicDatasetParameters
 
 
-class MP3SliceDataset(MusicDataset):
+class MusicDataset(Protocol):
+    dataset_params: MusicDatasetParameters
+    buffer: dict[str, Any] = {}
+
     def __init__(self, dataset_params: MusicDatasetParameters) -> None:
-        super().__init__(dataset_params)
+        ...
 
+    def _dump_data(self, path: str) -> None:
+        ...
+
+    def _load_data(self, path: str) -> None:
+        ...
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        ...
+
+    def __len__(self) -> int:
+        ...
+
+
+class MP3SliceDataset(Dataset):
+    dataset_params: MusicDatasetParameters
+    buffer: dict[str, Any] = {}
+
+    def __init__(self, dataset_params: MusicDatasetParameters) -> None:
+        super().__init__()
+
+        self.dataset_params = dataset_params
         self.preload = dataset_params.preload
         self.slice_length = dataset_params.slice_length
         self.sample_rate = dataset_params.sample_rate
@@ -53,8 +77,8 @@ class MP3SliceDataset(MusicDataset):
                 else:
                     self.buffer[key] = value
 
-    def _load_data_from_track(self, file: str, track_idx: int) -> Dict[str, Any]:
-        long_data, sr = torchaudio.load(file, format="mp3")
+    def _load_data_from_track(self, file: str, track_idx: int) -> dict[str, Any]:
+        long_data, sr = torchaudio.load(file, format="mp3")  # type: ignore
         long_data = self._resample_if_necessary(long_data, sr)
         long_data = self._mix_down_if_necessary(long_data)
         long_data = self._right_pad_if_necessary(long_data)
@@ -159,7 +183,7 @@ class MP3SliceDataset(MusicDataset):
 
         print("Parsed metadata and the slices to the buffer")
 
-    def __getitem__(self, index: int) -> Dict[str, Any]:
+    def __getitem__(self, index: int) -> dict[str, Any]:
         datapoint = {key: value[index] for (key, value) in self.buffer.items()}
         for value in datapoint.values():
             if isinstance(value, torch.Tensor):
@@ -169,8 +193,8 @@ class MP3SliceDataset(MusicDataset):
 
     @staticmethod
     def _create_slice_file_list(
-        root_data_path: str, metadata: Dict[str, Any]
-    ) -> List[str]:
+        root_data_path: str, metadata: list[dict[str, Any]]
+    ) -> list[str]:
         slice_file_names = []
         current_file_name = None
         for data_point in metadata:
@@ -192,20 +216,45 @@ class MP3SliceDataset(MusicDataset):
             else:
                 self.buffer["slice"] += [slice]
 
+    def __len__(self) -> int:
+        return len(self.buffer)
 
-class MP3MelSpecDataset(MelSpecMusicDataset):
+
+@dataclass
+class MelSpecDataset(Protocol):
+    base_dataset: MusicDataset
+    mel_spec_converter: MelSpecConverter
+
+    def _dump_data(self, path: str) -> None:
+        ...
+
+    def _load_data(self, path: str) -> None:
+        ...
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        ...
+
+    def __len__(self) -> int:
+        ...
+
+
+@dataclass
+class MP3MelSpecDataset:
+    base_dataset: MusicDataset
+    mel_spec_converter: MelSpecConverter
+
     def _dump_data(self, path: str) -> None:
         self.base_dataset._dump_data(path)
 
     def _load_data(self, path: str) -> None:
         self.base_dataset._load_data(path)
 
-    def _save_data(self, data: Dict[str, Any]) -> None:
-        self.base_dataset._save_data(data)
-
-    def __getitem__(self, index: int) -> Dict[str, Any]:
-        data_point = super().__getitem__(index)
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        data_point = self.base_dataset.__getitem__(index)
         data_point.update(
             {"mel_spec": self.mel_spec_converter.convert(data_point["slice"])}
         )
         return data_point
+
+    def __len__(self) -> int:
+        return self.base_dataset.__len__()

@@ -1,2 +1,7 @@
-from .base import MusicDataset, MusicDataModule
-from .build import MusicDatasetFactory, DATASETS, DATAMODULES
+from .build import (
+    build_mel_spec_converter,
+    build_mel_spec_dataset,
+    build_mel_spec_module,
+    build_music_data_module,
+    build_music_dataset,
+)

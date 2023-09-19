@@ -44,7 +44,7 @@ loss:
   aggregator_type: "weighted_sum"
 
   reconstruction_loss:
-    type: "reconstruction"
+    type: "rec"
     weight: 1.0
     base_loss_type: 'mse'
     phase_parameter: 1

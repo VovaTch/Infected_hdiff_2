@@ -1,33 +1,57 @@
-import unittest
+from typing import Any
 
 import yaml
+import pytest
 
-from loaders import MusicDatasetFactory
-from utils.containers import MusicDatasetParameters, LearningParameters
-
-
-class TestLoaders(unittest.TestCase):
-    def setUp(self) -> None:
-        # Load config
-        cfg_path = "config/test_config.yaml"
-        with open(cfg_path, "r") as f:
-            self.cfg = yaml.safe_load(f)
-
-        learning_params = LearningParameters(**self.cfg["learning"])
-        learning_params.batch_size = 3
-        dataset_params = MusicDatasetParameters(**self.cfg["dataset"])
-
-        self.data_module = MusicDatasetFactory.build_music_data_module(
-            dataset_params, learning_params
-        )
-
-    def test_data_loading(self):
-        self.data_module.setup("fit")
-        train_dataloader = self.data_module.train_dataloader()
-        for batch in train_dataloader:
-            break
-        self.assertEqual(len(batch["slice"]), 3)
+from loaders import (
+    build_mel_spec_module,
+    build_music_data_module,
+)
+from utils.containers import (
+    MelSpecParameters,
+    MusicDatasetParameters,
+    LearningParameters,
+)
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.fixture
+def get_cfg() -> dict[str, Any]:
+    cfg_path = "config/test_config.yaml"
+    with open(cfg_path, "r") as f:
+        cfg = yaml.safe_load(f)
+    return cfg
+
+
+def test_music_data_module(get_cfg):
+    cfg = get_cfg
+
+    learning_params = LearningParameters(**cfg["learning"])
+    learning_params.batch_size = 3
+    dataset_params = MusicDatasetParameters(**cfg["dataset"])
+
+    data_module = build_music_data_module(dataset_params, learning_params)
+    data_module.setup("fit")
+    train_dataloader = data_module.train_dataloader()
+    for batch in train_dataloader:
+        break
+
+    assert len(batch["slice"]) == 3  # type: ignore
+
+
+def test_mel_spec_data_module(get_cfg):
+    cfg = get_cfg
+
+    learning_params = LearningParameters(**cfg["learning"])
+    learning_params.batch_size = 3
+    dataset_params = MusicDatasetParameters(**cfg["dataset"])
+    mel_spec_params = MelSpecParameters(**cfg["image_mel_spec_params"])
+
+    data_module = build_mel_spec_module(
+        dataset_params, learning_params, mel_spec_params
+    )
+    data_module.setup("fit")
+    train_dataloader = data_module.train_dataloader()
+    for batch in train_dataloader:
+        break
+
+    assert len(batch["slice"]) == 3  # type: ignore

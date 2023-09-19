@@ -1,23 +1,47 @@
 from typing import Any, Dict
 
-from pytorch_lightning.utilities.types import STEP_OUTPUT
+from diffwave.model import DiffWave
+from diffwave.params import params, AttrDict
+import numpy as np
 import torch
+import torch.nn as nn
 
-from .base import BaseLightningModule
+from utils.containers import (
+    LearningParameters,
+    MelSpecParameters,
+    MusicDatasetParameters,
+)
 
 
-class Vocoder(BaseLightningModule):
+class DiffwaveWrapper(nn.Module):
+    def __init__(
+        self,
+        learning_params: LearningParameters,
+        mel_spec_params: MelSpecParameters,
+        dataset_params: MusicDatasetParameters,
+    ) -> None:
+        self.params = AttrDict(  # Training params
+            batch_size=learning_params.batch_size,
+            learning_rate=learning_params.learning_rate,
+            max_grad_norm=None,
+            # Data params
+            sample_rate=dataset_params.sample_rate,
+            n_mels=mel_spec_params.n_mels,
+            n_fft=mel_spec_params.n_fft,
+            hop_samples=mel_spec_params.hop_length,
+            crop_mel_frames=62,  # Probably an error in paper.
+            # Model params
+            residual_layers=30,
+            residual_channels=64,
+            dilation_cycle_length=10,
+            unconditional=False,
+            noise_schedule=np.linspace(1e-4, 0.05, 50).tolist(),
+            inference_noise_schedule=[0.0001, 0.001, 0.01, 0.05, 0.2, 0.5],
+            # unconditional sample len
+            audio_len=dataset_params.slice_length,  # unconditional_synthesis_samples)
+        )
+        self.model = DiffWave(AttrDict(self.params))
+
     def forward(self, x: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        assert (
-            "mel_spec" in x
-        ), "Input dictionary must include 'mel_spec' key that represents a mel spectrogram image."
-        slice_input = x["mel_spec"]
-        output = self.model(slice_input)
-        return output
-
-    def training_step(self, batch: Dict[str, Any], batch_idx: int) -> STEP_OUTPUT:
-        output = self.forward(batch)
-        loss_dict = self.loss_aggregator(output, batch)
-        for key, value in loss_dict.items():
-            prog_bar = True if "total_loss" in key else False
-            self.log()
+        outputs = self.model(x["mel_spec"])
+        return {"slice": outputs}
