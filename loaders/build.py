@@ -9,9 +9,13 @@ from models.build import build_mel_spec_converter
 from .datasets import MelSpecDataset, MusicDataset
 from .data_modules import MusicDataModule
 
-DATASETS: dict[str, type[MusicDataset]] = {"music_dataset": datasets.MP3SliceDataset}
+DATASETS: dict[str, type[MusicDataset]] = {
+    "music_dataset": datasets.MP3SliceDataset,
+    "test": datasets.TestDataset,
+}
 MEL_SPEC_DATASETS: dict[str, type[MelSpecDataset]] = {
-    "music_dataset": datasets.MP3MelSpecDataset
+    "music_dataset": datasets.MP3MelSpecDataset,
+    "test": datasets.TestMelSpecDataset,  # type: ignore
 }
 
 DATAMODULES: dict[str, type[MusicDataModule]] = {

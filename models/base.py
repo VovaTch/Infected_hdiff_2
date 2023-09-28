@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, TYPE_CHECKING, Optional
+from abc import abstractmethod
+from typing import Any, TYPE_CHECKING, Optional, Protocol
 
 import pytorch_lightning as pl
 import torch
@@ -34,7 +34,7 @@ class BaseLightningModule(pl.LightningModule):
         self.loss_aggregator = loss_aggregator
 
     @abstractmethod
-    def forward(self, x: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(self, x: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         ...
 
     def _configure_scheduler_settings(
@@ -49,6 +49,7 @@ class BaseLightningModule(pl.LightningModule):
         }
 
     def configure_optimizers(self):
+        print(self.scheduler)
         if self.scheduler is None:
             return [self.optimizer]
         else:
@@ -60,7 +61,7 @@ class BaseLightningModule(pl.LightningModule):
             return [self.optimizer], [scheduler_settings]
 
 
-class DiffusionScheduler(ABC):
+class DiffusionScheduler(Protocol):
     betas: torch.Tensor
     alphas: torch.Tensor
     alphas_cumprod: torch.Tensor
@@ -70,8 +71,7 @@ class DiffusionScheduler(ABC):
     sqrt_one_minus_alphas_cumprod: torch.Tensor
     posterior_variance: torch.Tensor
 
-    @abstractmethod
-    def __init__(self, num_steps: int) -> None:
+    def __init__(self, num_steps: int, device: str = "cpu") -> None:
         ...
 
 
@@ -93,29 +93,29 @@ class BaseDiffusionModel(BaseLightningModule):
 
     @abstractmethod
     def forward(
-        self, x: Dict[str, torch.Tensor], t: torch.Tensor, cond: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+        self, x: dict[str, torch.Tensor], t: torch.Tensor, cond: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         ...
 
     @abstractmethod
-    def get_loss(self, x_0: Dict[str, torch.Tensor], t: torch.Tensor) -> torch.Tensor:
+    def get_loss(self, x_0: dict[str, torch.Tensor], t: torch.Tensor) -> torch.Tensor:
         ...
 
     @abstractmethod
     def sample_timestep(
         self,
-        x: Dict[str, torch.Tensor],
+        x: dict[str, torch.Tensor],
         t: torch.Tensor,
-        cond: Dict[str, torch.Tensor] = {},
+        cond: dict[str, torch.Tensor] = {},
         verbose: bool = False,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         ...
 
     @abstractmethod
     def denoise(
         self,
-        noisy_input: Dict[str, torch.Tensor],
-        cond: Dict[str, torch.Tensor] = {},
+        noisy_input: dict[str, torch.Tensor],
+        cond: dict[str, torch.Tensor] = {},
         show_process_plots: bool = False,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         ...

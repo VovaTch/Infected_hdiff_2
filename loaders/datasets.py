@@ -217,7 +217,12 @@ class MP3SliceDataset(Dataset):
                 self.buffer["slice"] += [slice]
 
     def __len__(self) -> int:
-        return len(self.buffer)
+        return len(self.buffer["slice"])
+
+
+class TestDataset(MP3SliceDataset):
+    def __len__(self) -> int:
+        return 6
 
 
 @dataclass
@@ -258,3 +263,9 @@ class MP3MelSpecDataset:
 
     def __len__(self) -> int:
         return self.base_dataset.__len__()
+
+
+@dataclass
+class TestMelSpecDataset(MP3MelSpecDataset):
+    def __len__(self) -> int:
+        return 6

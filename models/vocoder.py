@@ -1,16 +1,22 @@
-from typing import Any, Dict
+from typing import Any, TYPE_CHECKING, Optional
 
 from diffwave.model import DiffWave
-from diffwave.params import params, AttrDict
+from diffwave.params import AttrDict
 import numpy as np
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
 
 from utils.containers import (
+    DiffusionParameters,
     LearningParameters,
     MelSpecParameters,
     MusicDatasetParameters,
 )
+from .base import BaseDiffusionModel
+
+if TYPE_CHECKING:
+    from loss.aggregators import LossAggregator
 
 
 class DiffwaveWrapper(nn.Module):
@@ -20,6 +26,7 @@ class DiffwaveWrapper(nn.Module):
         mel_spec_params: MelSpecParameters,
         dataset_params: MusicDatasetParameters,
     ) -> None:
+        super().__init__()
         self.params = AttrDict(  # Training params
             batch_size=learning_params.batch_size,
             learning_rate=learning_params.learning_rate,
@@ -42,6 +49,150 @@ class DiffwaveWrapper(nn.Module):
         )
         self.model = DiffWave(AttrDict(self.params))
 
-    def forward(self, x: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        outputs = self.model(x["mel_spec"])
-        return {"slice": outputs}
+    def forward(self, noisy_input: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        outputs = self.model(
+            noisy_input["noisy_slice"],
+            noisy_input["mel_spec"],
+            noisy_input["time_step"],
+        )
+        return {"noise_pred": outputs}
+
+
+class VocoderDiffusionModel(BaseDiffusionModel):
+    def __init__(
+        self,
+        base_model: nn.Module,
+        learning_params: LearningParameters,
+        diffusion_params: DiffusionParameters,
+        loss_aggregator: Optional["LossAggregator"] = None,
+        optimizer: torch.optim.Optimizer | None = None,
+        scheduler: Any = None,
+        **kwargs
+    ) -> None:
+        super().__init__(
+            base_model,
+            learning_params,
+            diffusion_params,
+            loss_aggregator,
+            optimizer,
+            scheduler,
+            **kwargs
+        )
+        if not optimizer:
+            self.optimizer = torch.optim.AdamW(
+                self.parameters(),
+                lr=learning_params.learning_rate,
+                weight_decay=learning_params.weight_decay,
+            )
+
+    def forward(self, x: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        outputs: dict[str, torch.Tensor] = self.model(x)
+        return outputs
+
+    def training_step(
+        self, batch: dict[str, torch.Tensor], batch_idx: int
+    ) -> STEP_OUTPUT:
+        # Ensure there is loss and an optimizer during training
+        if not self.loss_aggregator:
+            raise ValueError("Must include a loss aggregator during training")
+        if not self.optimizer:
+            raise ValueError("Must include an optimizer during training")
+
+        updated_inputs, slice_outputs = self._step(batch)
+        loss = self.loss_aggregator.compute(slice_outputs, updated_inputs)
+
+        for loss_key, loss_value in loss.individuals.items():
+            self.log(loss_key, loss_value)
+
+        self.log("training_total_loss", loss.total, prog_bar=True)
+        return loss.total
+
+    def set_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
+        self.optimizer = optimizer
+
+    def validation_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> None:
+        updated_inputs, slice_outputs = self._step(batch)
+
+        if not self.loss_aggregator:
+            return
+        loss = self.loss_aggregator.compute(slice_outputs, updated_inputs)
+
+        for loss_key, loss_value in loss.individuals.items():
+            self.log(loss_key, loss_value)
+
+        self.log("validation_total_loss", loss.total, prog_bar=True)
+
+    def _step(
+        self, batch: dict[str, torch.Tensor]
+    ) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+        # Create noised input
+        sampled_time_steps = torch.randint(
+            0,
+            self.diffusion_params.num_steps,
+            [batch["slice"].shape[0]],
+            device=self.device,
+        ).to(batch["slice"].device)
+        batch["mel_spec"] = batch["mel_spec"].squeeze(1)
+        batch["slice"] = batch["slice"].squeeze(1)
+        noisy_input = self.sample_timestep(batch, sampled_time_steps)
+        updated_inputs = {**noisy_input, **batch, "time_step": sampled_time_steps}
+
+        slice_outputs = self.forward(updated_inputs)
+        slice_outputs["noise_pred"] = slice_outputs["noise_pred"].squeeze(1)
+        return updated_inputs, slice_outputs
+
+    def sample_timestep(
+        self,
+        x: dict[str, torch.Tensor],
+        t: torch.Tensor,
+        cond: dict[str, torch.Tensor] = {},
+        verbose: bool = False,
+    ) -> dict[str, torch.Tensor]:
+        noise_scale = self.diffusion_params.scheduler.alphas_cumprod[t].unsqueeze(1)
+        noise_scale_sqrt = noise_scale**2
+        noise = torch.randn_like(x["slice"])
+        noisy_slice = noise_scale_sqrt * x["slice"] + (1.0 - noise_scale) ** 0.5 * noise
+        return {"noisy_slice": noisy_slice, "noise": noise}
+
+    def denoise(
+        self,
+        noisy_input: dict[str, torch.Tensor],
+        cond: dict[str, torch.Tensor] = {},
+        show_process_plots: bool = False,
+    ) -> dict[str, torch.Tensor]:
+        with torch.no_grad():
+            betas = self.diffusion_params.scheduler.betas
+            alphas = self.diffusion_params.scheduler.alphas
+            alphas_cumprod = self.diffusion_params.scheduler.alphas_cumprod
+
+            # This is from the code in the repo
+            time_series = []
+            for s in range(betas.shape[0]):
+                for t in range(betas.shape[0]):
+                    if alphas_cumprod[t + 1] <= alphas_cumprod[s] <= alphas_cumprod[t]:
+                        widdle = (
+                            alphas_cumprod[t] ** 0.5 - alphas_cumprod[s] ** 0.5
+                        ) / (alphas_cumprod[t] ** 0.5 - alphas_cumprod[t + 1] ** 0.5)
+                        time_series.append(t + widdle)
+                        break
+            time_series = torch.tensor(time_series)
+
+            denoised_slice = noisy_input["noisy_slice"].clone()
+
+            # TODO: I hate the naming here, just copying from the repo
+            for idx in range(betas.shape[0] - 1, -1, -1):
+                c1 = 1 / alphas[idx] ** 0.5
+                c2 = betas[idx] / (1 - alphas_cumprod[idx]) ** 0.5
+                denoised_slice = c1 * (denoised_slice - c2 * self.forward(noisy_input))
+                if idx > 0:
+                    added_noise = torch.randn_like(denoised_slice)
+                    sigma = (
+                        (1.0 - alphas_cumprod[idx - 1])
+                        / (1 - alphas_cumprod[idx])
+                        * betas[idx]
+                    ) ** 0.5
+                    denoised_slice += sigma * added_noise
+                denoised_slice = torch.clamp(denoised_slice, -1.0, 1.0)
+            return {
+                "denoised_slice": denoised_slice,
+            }

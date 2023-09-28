@@ -1,14 +1,16 @@
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 
 import torch
 import torch.nn as nn
 from loss.components.loss_modules import LOSS_MODULES
 
-from models.mel_spec_converters import MelSpecConverter
 from utils.containers import MelSpecParameters
-from models import build_mel_spec_converter
+from models.build import build_mel_spec_converter
 from utils.transform_funcs import TRANSFORM_FUNCS
+
+if TYPE_CHECKING:
+    from models.mel_spec_converters import MelSpecConverter
 
 
 @dataclass
@@ -23,7 +25,7 @@ class MelSpecLoss:
     base_loss: nn.Module
 
     # Loss-specific parameters
-    mel_spec_converter: MelSpecConverter
+    mel_spec_converter: "MelSpecConverter"
     transform_func: Callable[[torch.Tensor], torch.Tensor] = lambda x: torch.tanh(x)
     lin_start: float = 1.0
     lin_end: float = 1.0

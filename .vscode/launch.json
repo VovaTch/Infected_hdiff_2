@@ -16,9 +16,17 @@
             "name": "Python: Specific Test",
             "type": "python",
             "request": "launch",
-            "module": "tests.test_loss",
+            "module": "tests.test_vocoder",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: Current File Not Just My Code",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
     ]
 }

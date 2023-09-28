@@ -1,4 +1,3 @@
-import unittest
 import pytest
 
 from torch.utils.data import DataLoader

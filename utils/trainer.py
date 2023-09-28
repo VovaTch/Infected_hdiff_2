@@ -14,7 +14,7 @@ def initialize_trainer(learning_parameters: LearningParameters) -> pl.Trainer:
     # Set device
     num_devices = learning_parameters.num_devices
     accelerator = "cpu" if num_devices == 0 else "gpu"
-    num_devices = None if num_devices == 0 else num_devices
+    device_list = [idx for idx in range(num_devices)]
 
     # Configure trainer
     ema = EMA(learning_parameters.beta_ema)
@@ -40,8 +40,8 @@ def initialize_trainer(learning_parameters: LearningParameters) -> pl.Trainer:
             learning_rate_monitor,
             ema,
         ],
-        devices=num_devices,
-        max_epochs=learning_parameters.gradient_clip,
+        devices=device_list,
+        max_epochs=learning_parameters.epochs,
         log_every_n_steps=1,
         precision=precision,
         accelerator=accelerator,

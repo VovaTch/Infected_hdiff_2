@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import torch
 
@@ -69,6 +69,16 @@ class MelSpecParameters:
     n_mels: int
     power: float
     f_min: float
+    pad: int
     pad_mode: str = "reflect"
     norm: str = "slaney"
     mel_scale: str = "htk"
+
+
+def parse_cfg_for_vocoder(
+    cfg: dict[str, Any]
+) -> tuple[LearningParameters, MusicDatasetParameters, MelSpecParameters]:
+    learning_params = LearningParameters(**cfg["learning"])
+    dataset_params = MusicDatasetParameters(**cfg["dataset"])
+    mel_spec_params = MelSpecParameters(**cfg["image_mel_spec_params"])
+    return learning_params, dataset_params, mel_spec_params

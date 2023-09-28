@@ -4,7 +4,7 @@ learning:
 
   learning_rate: 0.0001
   weight_decay: 0.02
-  batch_size: 16
+  batch_size: 2
   epochs: 1000
   beta_ema: 0.9999
   gradient_clip: 0.1
@@ -15,8 +15,8 @@ learning:
   num_workers: 0
   val_split: 0.01
 
-  loss_monitor: "step"
-  interval: "training_total_loss"
+  loss_monitor: "training_total_loss"
+  interval: "epoch"
   frequency: 1
 
 dataset:
@@ -24,112 +24,32 @@ dataset:
   data_module_type: "basic"
   sample_rate: 44100
   data_dir: "data"
-  slice_length: 262144
+  slice_length: 32768
   preload: True
   device: "cpu"
   preload_data_dir: "data"
 
 image_mel_spec_params:
   n_fft: 2048
-  hop_length: 512
+  hop_length: 257
   n_mels: 128
   power: 0.5
   f_min: 20
+  pad: 0
   pad_mode: "reflect"
   norm: "slaney"
   mel_scale: "htk"
+
+
+diffusion: 
+  num_steps: 50
+  scheduler: "linear"
 
 loss:
 
   aggregator_type: "weighted_sum"
 
-  reconstruction_loss:
-    type: "rec"
+  noise_loss:
+    type: "noise"
     weight: 1.0
-    base_loss_type: 'mse'
-    phase_parameter: 1
-
-  melspec_loss_1:
-    type: "melspec"
-    weight: 1.0
-    base_loss_type: 'l1'
-    lin_start: 1.0
-    lin_end: 1.0
-    
-    melspec_params:
-      n_fft: 2048
-      hop_length: 256
-      n_mels: 128
-      pad_mode: reflect
-      f_min: 20
-      power: 1.0
-      norm: "slaney"
-      mel_scale: "htk"
-
-  melspec_loss_2:
-    type: "melspec"
-    weight: 1.0
-    base_loss_type: 'l1'
-    lin_start: 1.0
-    lin_end: 1.0
-
-    melspec_params:
-      n_fft: 1024
-      hop_length: 128
-      n_mels: 128
-      pad_mode: reflect
-      f_min: 20
-      power: 2.0
-      norm: "slaney"
-      mel_scale: "htk"
-
-  melspec_loss_3:
-    type: "melspec"
-    weight: 1.0
-    base_loss_type: 'l1'
-    lin_start: 0.1
-    lin_end: 20
-
-    melspec_params:
-      n_fft: 512
-      hop_length: 128
-      n_mels: 64
-      pad_mode: reflect
-      f_min: 20
-      power: 1.0
-      norm: "slaney"
-      mel_scale: "htk"
-
-  melspec_loss_4:
-    type: "melspec"
-    weight: 5.0
-    base_loss_type: 'l1'
-    lin_start: 0.5
-    lin_end: 10.0
-    
-    melspec_params:
-      n_fft: 2048
-      hop_length: 256
-      n_mels: 128
-      pad_mode: reflect
-      f_min: 20
-      power: 1.0
-      norm: "slaney"
-      mel_scale: "htk"
-
-  melspec_loss_5:
-    type: "melspec"
-    weight: 5.0
-    base_loss_type: 'l1'
-    lin_start: 0.1
-    lin_end: 20
-
-    melspec_params:
-      n_fft: 512
-      hop_length: 256
-      n_mels: 64
-      pad_mode: reflect
-      f_min: 20
-      power: 2.0
-      norm: "slaney"
-      mel_scale: "htk"
+    base_loss_type: "mse"
