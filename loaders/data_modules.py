@@ -73,10 +73,16 @@ class BasicMusicDataModule(pl.LightningModule):
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(
-            self.train_dataset, batch_size=self.learning_params.batch_size, shuffle=True
+            self.train_dataset,
+            batch_size=self.learning_params.batch_size,
+            shuffle=True,
+            num_workers=self.learning_params.num_workers,
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
-            self.val_dataset, batch_size=self.learning_params.batch_size, shuffle=False
+            self.val_dataset,
+            batch_size=self.learning_params.batch_size,
+            shuffle=False,
+            num_workers=self.learning_params.num_workers,
         )

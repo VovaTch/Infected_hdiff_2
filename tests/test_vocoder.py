@@ -25,7 +25,7 @@ def mel_spec_converter() -> MelSpecConverter:
 
 def test_forward(
     vocoder_diffusion_model: VocoderDiffusionModel, mel_spec_converter: MelSpecConverter
-):
+) -> None:
     batch_size = 3
     test_noisy_slice = torch.randn((batch_size, 32768))
     test_mel_spec = mel_spec_converter.convert(test_noisy_slice)
@@ -37,3 +37,9 @@ def test_forward(
     }
     outputs = vocoder_diffusion_model.forward(test_dict)
     assert outputs["noise_pred"].shape == test_dict["noisy_slice"].unsqueeze(1).shape
+
+
+def test_denoising(
+    vocoder_diffusion_model: VocoderDiffusionModel, mel_spec_converter: MelSpecConverter
+) -> None:
+    pass

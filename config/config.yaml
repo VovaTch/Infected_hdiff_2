@@ -12,7 +12,7 @@ learning:
   eval_split_factor: 0.01
   amp: False
   num_devices: 1
-  num_workers: 0
+  num_workers: 2
   val_split: 0.01
 
   loss_monitor: "training_total_loss"
