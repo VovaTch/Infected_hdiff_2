@@ -16,7 +16,7 @@ from utils.containers import (
 from .base import BaseDiffusionModel
 
 if TYPE_CHECKING:
-    from loss.aggregators import LossAggregator
+    from loss.aggregators import LossAggregator, LossOutput
 
 
 class DiffwaveWrapper(nn.Module):
@@ -67,7 +67,7 @@ class VocoderDiffusionModel(BaseDiffusionModel):
         loss_aggregator: Optional["LossAggregator"] = None,
         optimizer: torch.optim.Optimizer | None = None,
         scheduler: Any = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(
             base_model,
@@ -76,7 +76,7 @@ class VocoderDiffusionModel(BaseDiffusionModel):
             loss_aggregator,
             optimizer,
             scheduler,
-            **kwargs
+            **kwargs,
         )
         if not optimizer:
             self.optimizer = torch.optim.AdamW(
@@ -88,6 +88,9 @@ class VocoderDiffusionModel(BaseDiffusionModel):
     def forward(self, x: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         outputs: dict[str, torch.Tensor] = self.model(x)
         return outputs
+
+    def set_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
+        self.optimizer = optimizer
 
     def training_step(
         self, batch: dict[str, torch.Tensor], batch_idx: int
@@ -101,14 +104,8 @@ class VocoderDiffusionModel(BaseDiffusionModel):
         updated_inputs, slice_outputs = self._step(batch)
         loss = self.loss_aggregator.compute(slice_outputs, updated_inputs)
 
-        for loss_key, loss_value in loss.individuals.items():
-            self.log(loss_key, loss_value)
-
-        self.log("training_total_loss", loss.total, prog_bar=True)
+        self._log_losses("training", loss)
         return loss.total
-
-    def set_optimizer(self, optimizer: torch.optim.Optimizer) -> None:
-        self.optimizer = optimizer
 
     def validation_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> None:
         updated_inputs, slice_outputs = self._step(batch)
@@ -120,7 +117,7 @@ class VocoderDiffusionModel(BaseDiffusionModel):
         for loss_key, loss_value in loss.individuals.items():
             self.log(loss_key, loss_value)
 
-        self.log("validation_total_loss", loss.total, prog_bar=True)
+        self._log_losses("validation", loss)
 
     def _step(
         self, batch: dict[str, torch.Tensor]
@@ -140,6 +137,12 @@ class VocoderDiffusionModel(BaseDiffusionModel):
         slice_outputs = self.forward(updated_inputs)
         slice_outputs["noise_pred"] = slice_outputs["noise_pred"].squeeze(1)
         return updated_inputs, slice_outputs
+
+    def _log_losses(self, phase_name: str, loss: "LossOutput") -> None:
+        for loss_key, loss_value in loss.individuals.items():
+            self.log(f"{phase_name}_{loss_key}", loss_value)
+
+        self.log(f"{phase_name}_total_loss", loss.total, prog_bar=True)
 
     def sample_timestep(
         self,
