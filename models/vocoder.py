@@ -154,6 +154,7 @@ class VocoderDiffusionModel(BaseDiffusionModel):
         noisy_slice = noise_scale_sqrt * x["slice"] + (1.0 - noise_scale) ** 0.5 * noise
         return {"noisy_slice": noisy_slice, "noise": noise}
 
+    @torch.no_grad()
     def denoise(
         self,
         noisy_input: dict[str, torch.Tensor],
@@ -175,15 +176,27 @@ class VocoderDiffusionModel(BaseDiffusionModel):
                         ) / (alphas_cumprod[t] ** 0.5 - alphas_cumprod[t + 1] ** 0.5)
                         time_series.append(t + widdle)
                         break
-            time_series = torch.tensor(time_series)
+            time_series = torch.tensor(time_series).to(self.device)
 
-            denoised_slice = noisy_input["noisy_slice"].clone()
+            conditioned_mel_spec = cond["mel_spec"].clone().to(self.device)
+            denoised_slice = noisy_input["noisy_slice"].clone().to(self.device)
 
             # TODO: I hate the naming here, just copying from the repo
             for idx in range(betas.shape[0] - 1, -1, -1):
+                model_input = {
+                    "noisy_slice": denoised_slice,
+                    "mel_spec": conditioned_mel_spec,
+                    "time_step": time_series[idx],
+                }
+
                 c1 = 1 / alphas[idx] ** 0.5
                 c2 = betas[idx] / (1 - alphas_cumprod[idx]) ** 0.5
-                denoised_slice = c1 * (denoised_slice - c2 * self.forward(noisy_input))
+
+                model_output = self.forward(model_input)
+
+                denoised_slice = c1 * (
+                    denoised_slice - c2 * model_output["noise_pred"].squeeze(1)
+                )
                 if idx > 0:
                     added_noise = torch.randn_like(denoised_slice)
                     sigma = (
