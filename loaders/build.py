@@ -83,6 +83,17 @@ def build_mel_spec_module(
     learning_params: LearningParameters,
     mel_spec_params: MelSpecParameters,
 ) -> MusicDataModule:
+    """
+    Music + mel spectrogram lightning data module building function
+
+    Args:
+        dataset_params (MusicDatasetParameters): Dataset parameters object
+        learning_params (LearningParameters): Learning parameters object
+        mel_spec_params (MelSpecParameters): Mel Spectrogram parameter object
+
+    Returns:
+        MusicDataModule: Music lightning data module object
+    """
     dataset = build_mel_spec_dataset(dataset_params, mel_spec_params)
     datamodule_type = dataset_params.data_module_type
     data_module = DATAMODULES[datamodule_type](learning_params, dataset)  # type: ignore

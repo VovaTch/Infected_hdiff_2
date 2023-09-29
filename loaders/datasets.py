@@ -14,30 +14,80 @@ from utils.containers import MusicDatasetParameters
 
 
 class MusicDataset(Protocol):
+    """
+    Basic music dataset protocol
+    """
+
     dataset_params: MusicDatasetParameters
-    buffer: dict[str, Any] = {}
+    buffer: dict[str, Any] = {}  # Data buffer dictionary
 
     def __init__(self, dataset_params: MusicDatasetParameters) -> None:
+        """
+        Initializer method
+
+        Args:
+            dataset_params (MusicDatasetParameters): Dataset parameter object
+        """
         ...
 
     def _dump_data(self, path: str) -> None:
+        """
+        Saves the data in a designated folder path
+
+        Args:
+            path (str): Saved data folder path
+        """
         ...
 
     def _load_data(self, path: str) -> None:
+        """
+        Loads the data from a designated folder path
+
+        Args:
+            path (str): Loaded data folder path
+        """
         ...
 
     def __getitem__(self, index: int) -> dict[str, Any]:
+        """
+        Standard dataset object __getitem__ method
+
+        Args:
+            index (int): Index of the data-point
+
+        Returns:
+            dict[str, Any]: Dictionary item from the dataset, collected values with a
+            collate_fn function from Pytorch
+        """
         ...
 
     def __len__(self) -> int:
+        """
+        Dataset length getter method
+
+        Returns:
+            int: Dataset length
+        """
         ...
 
 
 class MP3SliceDataset(Dataset):
+    """
+    Basic music slice dataset. Loads .mp3 files from a folder, converts them into one channel of long tensors,
+    stores them with metadata that includes indices, time stamps, and file names. Can be extended to include
+    also Mel-Spectrograms.
+    """
+
     dataset_params: MusicDatasetParameters
     buffer: dict[str, Any] = {}
 
     def __init__(self, dataset_params: MusicDatasetParameters) -> None:
+        """
+        Initializer method
+
+        Args:
+            dataset_params (MusicDatasetParameters): Dataset parameter object
+        """
         super().__init__()
 
         self.dataset_params = dataset_params
@@ -56,7 +106,10 @@ class MP3SliceDataset(Dataset):
             self._generate_data()
             self._dump_data(dataset_params.data_dir)
 
-    def _generate_data(self):
+    def _generate_data(self) -> None:
+        """
+        Helper method for loading data from all music files in a folder into the buffer.
+        """
         # Create mp3 file list
         self.file_list = []
         for subdir, _, files in os.walk(self.dataset_params.data_dir):
@@ -78,6 +131,16 @@ class MP3SliceDataset(Dataset):
                     self.buffer[key] = value
 
     def _load_data_from_track(self, file: str, track_idx: int) -> dict[str, Any]:
+        """
+        Helper method for loading data and metadata from file into a dictionary.
+
+        Args:
+            file (str): File path, supported format is .mp3 currently.
+            track_idx (int): Track index
+
+        Returns:
+            dict[str, Any]: Output dictionary contains the slice data and metadata from a file.
+        """
         long_data, sr = torchaudio.load(file, format="mp3")  # type: ignore
         long_data = self._resample_if_necessary(long_data, sr)
         long_data = self._mix_down_if_necessary(long_data)
@@ -110,18 +173,49 @@ class MP3SliceDataset(Dataset):
 
         return data
 
-    def _resample_if_necessary(self, signal: torch.Tensor, sr: int):
-        if sr != self.sample_rate:
-            resampler = torchaudio.transforms.Resample(sr, self.sample_rate)
+    def _resample_if_necessary(
+        self, signal: torch.Tensor, sampling_rate: int
+    ) -> torch.Tensor:
+        """
+        Helper method to change the sampling rate of a music track
+
+        Args:
+            signal (torch.Tensor): Music slice, expects `C x L` size
+            sampling_rate (int): Sampling rate, default for MP3 is 44100.
+
+        Returns:
+            torch.Tensor: Resampled signal
+        """
+        if sampling_rate != self.sample_rate:
+            resampler = torchaudio.transforms.Resample(sampling_rate, self.sample_rate)
             signal = resampler(signal)
         return signal
 
-    def _mix_down_if_necessary(self, signal: torch.Tensor):
+    def _mix_down_if_necessary(self, signal: torch.Tensor) -> torch.Tensor:
+        """
+        Helper method to merge down music channels, currently the code doesn't support more than 1 channel.
+
+        Args:
+            signal (torch.Tensor): Signal to be mixed down, shape `C x L`
+
+        Returns:
+            torch.Tensor: Mixed-down signal, shape `1 x L`
+        """
+
         if signal.shape[0] > 1:
             signal = torch.mean(signal, dim=0, keepdim=True)
         return signal
 
-    def _right_pad_if_necessary(self, signal: torch.Tensor):
+    def _right_pad_if_necessary(self, signal: torch.Tensor) -> torch.Tensor:
+        """
+        Helper function aimed to keep all the slices at a constant size, pad with 0 if the slice is too short.
+
+        Args:
+            signal (torch.Tensor): Input slice, shape `1 x L*`
+
+        Returns:
+            torch.Tensor: Output slice, shape `1 x L` padded with zeroes.
+        """
         length_signal = signal.shape[1]
         if length_signal % self.slice_length != 0:
             num_missing_samples = self.slice_length - length_signal % self.slice_length
@@ -130,6 +224,13 @@ class MP3SliceDataset(Dataset):
         return signal
 
     def _dump_data(self, path: str) -> None:
+        """
+        Saves the data in a designated folder path
+
+        Args:
+            path (str): Saved data folder path
+        """
+
         # Make slice folder
         slice_data_path = os.path.join(path, "slices")
         os.makedirs(slice_data_path)
@@ -158,6 +259,13 @@ class MP3SliceDataset(Dataset):
             torch.save(aggregate_slices_torch, slice_file_path)
 
     def _load_data(self, path: str) -> None:
+        """
+        Loads the data from a designated folder path
+
+        Args:
+            path (str): Loaded data folder path
+        """
+
         json_file_path = os.path.join(path, "metadata.json")
         with open(json_file_path, "r") as f:
             metadata = json.load(f)
@@ -184,6 +292,18 @@ class MP3SliceDataset(Dataset):
         print("Parsed metadata and the slices to the buffer")
 
     def __getitem__(self, index: int) -> dict[str, Any]:
+        """
+        Standard dataset object __getitem__ method
+
+        Args:
+            index (int): Index of the data-point
+
+        Returns:
+            *   dict[str, Any]: Dictionary item from the dataset, collected values with a
+                collate_fn function from Pytorch. The expected slice output from a dataloader is:
+                -   `slice`: tensor size `BS x 1 x L`
+        """
+
         datapoint = {key: value[index] for (key, value) in self.buffer.items()}
         for value in datapoint.values():
             if isinstance(value, torch.Tensor):
@@ -195,6 +315,16 @@ class MP3SliceDataset(Dataset):
     def _create_slice_file_list(
         root_data_path: str, metadata: list[dict[str, Any]]
     ) -> list[str]:
+        """
+        Helper method to attach the file name to each slice
+
+        Args:
+            root_data_path (str): .mp3 file folder
+            metadata (list[dict[str, Any]]): metadata list
+
+        Returns:
+            list[str]: list of music file paths, at the length of the metadata list
+        """
         slice_file_names = []
         current_file_name = None
         for data_point in metadata:
@@ -210,6 +340,12 @@ class MP3SliceDataset(Dataset):
         return slice_file_paths
 
     def _parse_slices_to_buffer(self, slices: torch.Tensor) -> None:
+        """
+        Helper method to fit the slices into the buffer
+
+        Args:
+            slices (torch.Tensor): Music slices
+        """
         for slice in slices:
             if "slice" not in self.buffer:
                 self.buffer["slice"] = [slice]
@@ -217,44 +353,120 @@ class MP3SliceDataset(Dataset):
                 self.buffer["slice"] += [slice]
 
     def __len__(self) -> int:
+        """
+        Dataset length getter method
+
+        Returns:
+            int: Dataset length
+        """
         return len(self.buffer["slice"])
 
 
 class TestDataset(MP3SliceDataset):
+    """
+    Dataset object for testing, which inherits from the slice dataset and modifies the __len__
+    method to return a small number rather than the entire dataset.
+    """
+
     def __len__(self) -> int:
+        """
+        Returns the length of the dataset
+
+        Returns:
+            int: 6, it is short and to the point.
+        """
         return 6
 
 
 @dataclass
 class MelSpecDataset(Protocol):
-    base_dataset: MusicDataset
-    mel_spec_converter: MelSpecConverter
+    """
+    Music dataset variation protocol that also includes mel-spectrogram conversion in it.
+    """
+
+    base_dataset: MusicDataset  # Base music dataset
+    mel_spec_converter: MelSpecConverter  # Mel spec conversion object
 
     def _dump_data(self, path: str) -> None:
+        """
+        Saves the data in a designated folder path
+
+        Args:
+            path (str): Saved data folder path
+        """
         ...
 
     def _load_data(self, path: str) -> None:
+        """
+        Loads the data from a designated folder path
+
+        Args:
+            path (str): Loaded data folder path
+        """
         ...
 
     def __getitem__(self, index: int) -> dict[str, Any]:
+        """
+        Standard dataset object __getitem__ method
+
+        Args:
+            index (int): Index of the data-point
+
+        Returns:
+            dict[str, Any]: Dictionary item from the dataset, collected values with a
+            collate_fn function from Pytorch
+        """
         ...
 
     def __len__(self) -> int:
+        """
+        Dataset length getter method
+
+        Returns:
+            int: Dataset length
+        """
         ...
 
 
 @dataclass
 class MP3MelSpecDataset:
+    """
+    Mel-spec-included version of the basic music dataset.
+    """
+
     base_dataset: MusicDataset
     mel_spec_converter: MelSpecConverter
 
     def _dump_data(self, path: str) -> None:
+        """
+        Saves the data in a designated folder path
+
+        Args:
+            path (str): Saved data folder path
+        """
         self.base_dataset._dump_data(path)
 
     def _load_data(self, path: str) -> None:
+        """
+        Loads the data from a designated folder path
+
+        Args:
+            path (str): Loaded data folder path
+        """
         self.base_dataset._load_data(path)
 
     def __getitem__(self, index: int) -> dict[str, Any]:
+        """
+        Standard dataset object __getitem__ method
+
+        Args:
+            index (int): Index of the data-point
+
+        Returns:
+            dict[str, Any]: Dictionary item from the dataset, collected values with a
+            collate_fn function from Pytorch. The output is the same as the basic mp3 dataset,
+            but with the added mel-spectrogram conversion of the slice.
+        """
         data_point = self.base_dataset.__getitem__(index)
         data_point.update(
             {"mel_spec": self.mel_spec_converter.convert(data_point["slice"])}
@@ -262,10 +474,27 @@ class MP3MelSpecDataset:
         return data_point
 
     def __len__(self) -> int:
+        """
+        Dataset length getter method
+
+        Returns:
+            int: Dataset length
+        """
         return self.base_dataset.__len__()
 
 
 @dataclass
 class TestMelSpecDataset(MP3MelSpecDataset):
+    """
+    Dataset object for testing, which inherits from the slice dataset and modifies the __len__
+    method to return a small number rather than the entire dataset.
+    """
+
     def __len__(self) -> int:
+        """
+        Returns the length of the dataset
+
+        Returns:
+            int: 6, it is short and to the point.
+        """
         return 6

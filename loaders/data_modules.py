@@ -55,14 +55,32 @@ class MusicDataModule(Protocol):
 
 
 class BasicMusicDataModule(pl.LightningModule):
+    """
+    Simple data module to be used with standard datasets
+    """
+
     def __init__(
         self, learning_params: LearningParameters, dataset: MusicDataset
     ) -> None:
+        """
+        Initializer method
+
+        Args:
+            learning_params (LearningParameters): Learning parameter object
+            dataset (MusicDataset): Dataset object
+        """
         super().__init__()
         self.learning_params = learning_params
         self.dataset = dataset
 
     def setup(self, stage: str) -> None:
+        """
+        Lightning module setup method
+
+        Args:
+            stage (str): Unused in this implementation
+        """
+
         # Split into training and validation
         training_len = int((1 - self.learning_params.val_split) * len(self.dataset))
         val_len = len(self.dataset) - training_len
@@ -72,6 +90,12 @@ class BasicMusicDataModule(pl.LightningModule):
         )
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
+        """
+        Lightning module train_dataloader method
+
+        Returns:
+            TRAIN_DATALOADERS: training dataloader object
+        """
         return DataLoader(
             self.train_dataset,
             batch_size=self.learning_params.batch_size,
@@ -80,6 +104,12 @@ class BasicMusicDataModule(pl.LightningModule):
         )
 
     def val_dataloader(self) -> EVAL_DATALOADERS:
+        """
+        Lightning module eval_dataloader method
+
+        Returns:
+            EVAL_DATALOADERS: eval dataloader object
+        """
         return DataLoader(
             self.val_dataset,
             batch_size=self.learning_params.batch_size,

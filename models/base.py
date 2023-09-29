@@ -40,7 +40,8 @@ class BaseLightningModule(pl.LightningModule):
     def _configure_scheduler_settings(
         self, interval: str, monitor: str, frequency: int
     ):
-        assert self.scheduler is not None, "Must include a scheduler"
+        if self.scheduler is None:
+            raise TypeError("Must include a scheduler")
         return {
             "scheduler": self.scheduler,
             "interval": interval,

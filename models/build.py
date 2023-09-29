@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 def build_mel_spec_converter(
     type: str, mel_spec_params: MelSpecParameters
 ) -> MelSpecConverter:
-    assert type in MEL_SPEC_CONVERTERS, f"Unknown converter type {type}"
+    if type not in MEL_SPEC_CONVERTERS:
+        raise ValueError(f"Unknown converter type {type}")
     mel_spec_converter = MEL_SPEC_CONVERTERS[type](mel_spec_params)
     return mel_spec_converter
 
