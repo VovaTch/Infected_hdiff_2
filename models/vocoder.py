@@ -6,6 +6,7 @@ import numpy as np
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
+import seaborn as sns
 
 from utils.containers import (
     DiffusionParameters,
