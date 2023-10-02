@@ -6,6 +6,7 @@ import numpy as np
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
 import seaborn as sns
 
 from utils.containers import (
@@ -153,10 +154,10 @@ class VocoderDiffusionModel(BaseDiffusionModel):
         verbose: bool = False,
     ) -> dict[str, torch.Tensor]:
         noise_scale = self.diffusion_params.scheduler.alphas_cumprod[t].unsqueeze(1)
-        noise_scale_sqrt = noise_scale**2
+        noise_scale_sqrt = noise_scale**0.5
         noise = torch.randn_like(x["slice"])
         noisy_slice = noise_scale_sqrt * x["slice"] + (1.0 - noise_scale) ** 0.5 * noise
-        return {"noisy_slice": noisy_slice, "noise": noise}
+        return {"noisy_slice": noisy_slice, "noise": noise, "noise_scale": noise_scale}
 
     @torch.no_grad()
     def denoise(
@@ -193,7 +194,7 @@ class VocoderDiffusionModel(BaseDiffusionModel):
                     "time_step": time_series[idx],
                 }
 
-                c1 = 1 / alphas[idx] ** 0.5
+                c1 = 1 / (alphas[idx] ** 0.5)
                 c2 = betas[idx] / (1 - alphas_cumprod[idx]) ** 0.5
 
                 model_output = self.forward(model_input)
@@ -210,6 +211,12 @@ class VocoderDiffusionModel(BaseDiffusionModel):
                     ) ** 0.5
                     denoised_slice += sigma * added_noise
                 denoised_slice = torch.clamp(denoised_slice, -1.0, 1.0)
+
+                if show_process_plots:
+                    sns.set_style("darkgrid")
+                    ax = sns.lineplot(denoised_slice.squeeze(0).cpu().numpy())
+                    ax.set_ylim((-1.0, 1.0))
+                    plt.show()
             return {
                 "denoised_slice": denoised_slice,
             }

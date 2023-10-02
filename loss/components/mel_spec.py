@@ -84,3 +84,46 @@ def build_mel_spec_loss_from_cfg(name: str, loss_cfg: dict[str, Any]) -> MelSpec
         lin_start=lin_start,
         lin_end=lin_end,
     )
+
+
+class MelSpecDiffusionLoss(MelSpecLoss):
+    def __call__(
+        self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        target_slice = target["slice"]
+        noisy_slice = target["noisy_slice"]
+        noise_scale = target["noise_scale"]
+        noise_pred = estimation["noise_pred"]
+        estimated_slice = (noisy_slice - (1.0 - noise_scale) ** 0.5 * noise_pred) / (
+            noise_scale**0.5
+        )
+
+        return self.base_loss(
+            self._mel_spec_and_process(estimated_slice),
+            self._mel_spec_and_process(target_slice),
+        )
+
+
+def build_mel_spec_diff_loss_from_cfg(
+    name: str, loss_cfg: dict[str, Any]
+) -> MelSpecLoss:
+    # Create mel spec converter
+    mel_spec_params = MelSpecParameters(**loss_cfg["melspec_params"])
+    mel_spec_converter = build_mel_spec_converter(
+        type="simple", mel_spec_params=mel_spec_params
+    )
+    loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "mse")]
+    transform_func = TRANSFORM_FUNCS[loss_cfg.get("transform_func", "tanh")]
+    lin_start = loss_cfg.get("lin_start", 1.0)
+    lin_end = loss_cfg.get("lin_end", 1.0)
+
+    # Create mel-spec loss
+    return MelSpecDiffusionLoss(
+        name,
+        loss_cfg.get("weight", 1.0),
+        loss_module,
+        mel_spec_converter,
+        transform_func=transform_func,
+        lin_start=lin_start,
+        lin_end=lin_end,
+    )

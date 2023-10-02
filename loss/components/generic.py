@@ -11,7 +11,12 @@ from .codebook import (
     build_commitment_loss_from_cfg,
 )
 from .lm_cross_entropy import DecoderCrossEntropy, build_lm_cross_entropy_from_cfg
-from .mel_spec import MelSpecLoss, build_mel_spec_loss_from_cfg
+from .mel_spec import (
+    MelSpecLoss,
+    build_mel_spec_loss_from_cfg,
+    MelSpecDiffusionLoss,
+    build_mel_spec_diff_loss_from_cfg,
+)
 from .reconstruction import (
     RecLoss,
     NoisePredLoss,
@@ -38,6 +43,7 @@ COMPONENTS: dict[str, Any] = {
     "commit": CommitLoss,
     "lm_ce": DecoderCrossEntropy,
     "melspec": MelSpecLoss,
+    "melspecdiff": MelSpecDiffusionLoss,
     "rec": RecLoss,
     "noise": NoisePredLoss,
 }
@@ -47,6 +53,7 @@ COMPONENT_FACTORIES: dict[str, Callable[[str, dict[str, Any]], Any]] = {
     "commit": build_commitment_loss_from_cfg,
     "lm_ce": build_lm_cross_entropy_from_cfg,
     "melspec": build_mel_spec_loss_from_cfg,
+    "melspecdiff": build_mel_spec_diff_loss_from_cfg,
     "rec": build_rec_loss_from_cfg,
     "noise": build_noise_pred_loss_from_cfg,
 }
