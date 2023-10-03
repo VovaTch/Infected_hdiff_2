@@ -20,8 +20,10 @@ from .mel_spec import (
 from .reconstruction import (
     RecLoss,
     NoisePredLoss,
+    DiffReconstructionLoss,
     build_rec_loss_from_cfg,
     build_noise_pred_loss_from_cfg,
+    build_diff_rec_loss_from_cfg,
 )
 
 
@@ -46,6 +48,7 @@ COMPONENTS: dict[str, Any] = {
     "melspecdiff": MelSpecDiffusionLoss,
     "rec": RecLoss,
     "noise": NoisePredLoss,
+    "diff_rec": DiffReconstructionLoss,
 }
 
 COMPONENT_FACTORIES: dict[str, Callable[[str, dict[str, Any]], Any]] = {
@@ -56,8 +59,14 @@ COMPONENT_FACTORIES: dict[str, Callable[[str, dict[str, Any]], Any]] = {
     "melspecdiff": build_mel_spec_diff_loss_from_cfg,
     "rec": build_rec_loss_from_cfg,
     "noise": build_noise_pred_loss_from_cfg,
+    "diff_rec": build_diff_rec_loss_from_cfg,
 }
 
 
-def register_component(new_component: LossComponent, type: str) -> None:
+def register_component(
+    new_component: LossComponent,
+    new_component_factory: Callable[[str, dict[str, Any]], Any],
+    type: str,
+) -> None:
     COMPONENTS[type] = new_component
+    COMPONENT_FACTORIES[type] = new_component_factory

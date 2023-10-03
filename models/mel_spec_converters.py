@@ -39,6 +39,7 @@ class SimpleMelSpecConverter:
         self.mel_spec = MelSpectrogram(**asdict(mel_spec_params))
 
     def convert(self, slice: torch.Tensor) -> torch.Tensor:
+        self.mel_spec = self.mel_spec.to(slice.device)
         output = self.mel_spec(slice)
         return output
 
@@ -51,6 +52,7 @@ class ScaledImageMelSpecConverter:
         self.mel_spec = MelSpectrogram(**asdict(mel_spec_params))
 
     def convert(self, slice: torch.Tensor) -> torch.Tensor:
+        self.mel_spec = self.mel_spec.to(slice.device)
         output = self.mel_spec(slice)
         scaled_output = torch.tanh(output)
 

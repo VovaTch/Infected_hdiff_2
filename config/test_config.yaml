@@ -72,6 +72,24 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
+  melspec_rec_loss_1:
+    type: "melspecdiff"
+    weight: 1.0
+    base_loss_type: 'l1'
+    lin_start: 1.0
+    lin_end: 1.0
+    
+    melspec_params:
+      n_fft: 2048
+      hop_length: 256
+      n_mels: 128
+      pad_mode: reflect
+      f_min: 20
+      power: 1.0
+      pad: 0
+      norm: "slaney"
+      mel_scale: "htk"
+
   melspec_loss_2:
     type: "melspec"
     weight: 1.0
@@ -143,3 +161,8 @@ loss:
       pad: 0
       norm: "slaney"
       mel_scale: "htk"
+
+  rec_noise_loss:
+    type: "diff_rec"
+    weight: 1.0
+    base_loss_type: "mse"

@@ -1,6 +1,6 @@
 learning:
 
-  model_name: "generic_model"
+  model_name: "diffwave_vocoder"
 
   learning_rate: 0.0001
   weight_decay: 0.02
@@ -53,3 +53,98 @@ loss:
     type: "noise"
     weight: 1.0
     base_loss_type: "mse"
+
+  rec_noise_loss:
+    type: "diff_rec"
+    weight: 1.0
+    base_loss_type: "mse"
+
+  melspec_rec_loss_1:
+    type: "melspecdiff"
+    weight: 1.0
+    base_loss_type: 'l1'
+    lin_start: 1.0
+    lin_end: 1.0
+    
+    melspec_params:
+      n_fft: 2048
+      hop_length: 256
+      n_mels: 128
+      pad_mode: reflect
+      f_min: 20
+      power: 1.0
+      pad: 0
+      norm: "slaney"
+      mel_scale: "htk"
+
+  melspec_rec_loss_2:
+    type: "melspecdiff"
+    weight: 1.0
+    base_loss_type: 'l1'
+    lin_start: 1.0
+    lin_end: 1.0
+
+    melspec_params:
+      n_fft: 1024
+      hop_length: 128
+      n_mels: 128
+      pad_mode: reflect
+      f_min: 20
+      power: 2.0
+      pad: 0
+      norm: "slaney"
+      mel_scale: "htk"
+
+  melspec_rec_loss_3:
+    type: "melspecdiff"
+    weight: 1.0
+    base_loss_type: 'l1'
+    lin_start: 0.1
+    lin_end: 20
+
+    melspec_params:
+      n_fft: 512
+      hop_length: 128
+      n_mels: 64
+      pad_mode: reflect
+      f_min: 20
+      power: 1.0
+      pad: 0
+      norm: "slaney"
+      mel_scale: "htk"
+
+  melspec_rec_loss_4:
+    type: "melspecdiff"
+    weight: 5.0
+    base_loss_type: 'l1'
+    lin_start: 0.5
+    lin_end: 10.0
+    
+    melspec_params:
+      n_fft: 2048
+      hop_length: 256
+      n_mels: 128
+      pad_mode: reflect
+      f_min: 20
+      power: 1.0
+      pad: 0
+      norm: "slaney"
+      mel_scale: "htk"
+
+  melspec_rec_loss_5:
+    type: "melspecdiff"
+    weight: 5.0
+    base_loss_type: 'l1'
+    lin_start: 0.1
+    lin_end: 20
+
+    melspec_params:
+      n_fft: 512
+      hop_length: 256
+      n_mels: 64
+      pad_mode: reflect
+      f_min: 20
+      power: 2.0
+      pad: 0
+      norm: "slaney"
+      mel_scale: "htk"

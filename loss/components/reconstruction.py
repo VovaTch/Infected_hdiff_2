@@ -88,3 +88,37 @@ def build_noise_pred_loss_from_cfg(
 ) -> NoisePredLoss:
     loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "mse")]
     return NoisePredLoss(name, loss_cfg.get("weight", 1.0), loss_module)
+
+
+@dataclass
+class DiffReconstructionLoss:
+    """
+    Predicts at any given time-step what is the final signal and compares it to the ground truth
+    """
+
+    name: str
+    weight: float
+    base_loss: nn.Module
+
+    def __call__(
+        self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        target_slice = target["slice"]
+        noisy_slice = target["noisy_slice"]
+        noise_scale = target["noise_scale"]
+        noise_pred = estimation["noise_pred"]
+        estimated_slice = (noisy_slice - (1.0 - noise_scale) ** 0.5 * noise_pred) / (
+            noise_scale**0.5
+        )
+
+        return self.base_loss(
+            estimated_slice,
+            target_slice,
+        )
+
+
+def build_diff_rec_loss_from_cfg(
+    name: str, loss_cfg: dict[str, Any]
+) -> DiffReconstructionLoss:
+    loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "mse")]
+    return DiffReconstructionLoss(name, loss_cfg.get("weight", 1.0), loss_module)
