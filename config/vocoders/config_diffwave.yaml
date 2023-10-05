@@ -1,8 +1,8 @@
 learning:
 
-  model_name: "generic_model"
+  model_name: "diffwave_vocoder"
 
-  learning_rate: 0.0001
+  learning_rate: 0.00001
   weight_decay: 0.02
   batch_size: 2
   epochs: 1000
@@ -12,7 +12,7 @@ learning:
   eval_split_factor: 0.01
   amp: False
   num_devices: 1
-  num_workers: 0
+  num_workers: 2
   val_split: 0.01
 
   loss_monitor: "training_total_loss"
@@ -20,7 +20,7 @@ learning:
   frequency: 1
 
 dataset:
-  dataset_type: "test"
+  dataset_type: "music_dataset"
   data_module_type: "basic"
   sample_rate: 44100
   data_dir: "data"
@@ -31,68 +31,33 @@ dataset:
 
 image_mel_spec_params:
   n_fft: 2048
-  hop_length: 257 # Apparently 257 is the only hop-length that diffwave works with?
+  hop_length: 257
   n_mels: 128
   power: 0.5
   f_min: 20
+  pad: 0
   pad_mode: "reflect"
   norm: "slaney"
   mel_scale: "htk"
-  pad: 0
 
-image_mel_spec_params_res1d:
-  n_fft: 2048
-  hop_length: 1025
-  n_mels: 32
-  power: 0.5
-  f_min: 20
-  pad: 0
-  pad_mode: "reflect"
-  norm: "slaney"
-  mel_scale: "htk"
 
 diffusion: 
   num_steps: 50
   scheduler: "linear"
 
-
-model:
-  hidden_size: 32
-  input_channels: 1
-  dim_change_sequence: [2, 4, 4, 4, 4, 2]
-  kernel_size: 3
-  num_res_block_conv: 4
-  dilation_factor: 3
-  dim_add_kernel_add: 0
-
-
 loss:
 
   aggregator_type: "weighted_sum"
 
-  reconstruction_loss:
-    type: "rec"
+  noise_loss:
+    type: "noise"
     weight: 1.0
-    base_loss_type: 'mse'
-    phase_parameter: 1
+    base_loss_type: "mse"
 
-  melspec_loss_1:
-    type: "melspec"
+  rec_noise_loss:
+    type: "diff_rec"
     weight: 1.0
-    base_loss_type: 'l1'
-    lin_start: 1.0
-    lin_end: 1.0
-    
-    melspec_params:
-      n_fft: 2048
-      hop_length: 256
-      n_mels: 128
-      pad_mode: reflect
-      f_min: 20
-      power: 1.0
-      pad: 0
-      norm: "slaney"
-      mel_scale: "htk"
+    base_loss_type: "mse"
 
   melspec_rec_loss_1:
     type: "melspecdiff"
@@ -112,8 +77,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_loss_2:
-    type: "melspec"
+  melspec_rec_loss_2:
+    type: "melspecdiff"
     weight: 1.0
     base_loss_type: 'l1'
     lin_start: 1.0
@@ -130,8 +95,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_loss_3:
-    type: "melspec"
+  melspec_rec_loss_3:
+    type: "melspecdiff"
     weight: 1.0
     base_loss_type: 'l1'
     lin_start: 0.1
@@ -148,8 +113,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_loss_4:
-    type: "melspec"
+  melspec_rec_loss_4:
+    type: "melspecdiff"
     weight: 5.0
     base_loss_type: 'l1'
     lin_start: 0.5
@@ -166,8 +131,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_loss_5:
-    type: "melspec"
+  melspec_rec_loss_5:
+    type: "melspecdiff"
     weight: 5.0
     base_loss_type: 'l1'
     lin_start: 0.1
@@ -183,8 +148,3 @@ loss:
       pad: 0
       norm: "slaney"
       mel_scale: "htk"
-
-  rec_noise_loss:
-    type: "diff_rec"
-    weight: 1.0
-    base_loss_type: "mse"

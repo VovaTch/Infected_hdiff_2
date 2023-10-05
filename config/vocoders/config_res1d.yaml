@@ -1,10 +1,10 @@
 learning:
 
-  model_name: "diffwave_vocoder"
+  model_name: "res1d"
 
   learning_rate: 0.0001
   weight_decay: 0.02
-  batch_size: 2
+  batch_size: 8
   epochs: 1000
   beta_ema: 0.9999
   gradient_clip: 0.1
@@ -19,6 +19,15 @@ learning:
   interval: "epoch"
   frequency: 1
 
+model:
+  hidden_size: 24
+  input_channels: 1
+  dim_change_sequence: [2, 4, 4, 4, 4, 2]
+  kernel_size: 3
+  num_res_block_conv: 4
+  dilation_factor: 3
+  dim_add_kernel_add: 0
+
 dataset:
   dataset_type: "music_dataset"
   data_module_type: "basic"
@@ -31,8 +40,8 @@ dataset:
 
 image_mel_spec_params:
   n_fft: 2048
-  hop_length: 257
-  n_mels: 128
+  hop_length: 1025
+  n_mels: 32
   power: 0.5
   f_min: 20
   pad: 0
@@ -49,18 +58,14 @@ loss:
 
   aggregator_type: "weighted_sum"
 
-  noise_loss:
-    type: "noise"
+  reconstruction_loss:
+    type: "rec"
     weight: 1.0
-    base_loss_type: "mse"
+    base_loss_type: 'mse'
+    phase_parameter: 1
 
-  rec_noise_loss:
-    type: "diff_rec"
-    weight: 1.0
-    base_loss_type: "mse"
-
-  melspec_rec_loss_1:
-    type: "melspecdiff"
+  melspec_loss_1:
+    type: "melspec"
     weight: 1.0
     base_loss_type: 'l1'
     lin_start: 1.0
@@ -77,8 +82,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_rec_loss_2:
-    type: "melspecdiff"
+  melspec_loss_2:
+    type: "melspec"
     weight: 1.0
     base_loss_type: 'l1'
     lin_start: 1.0
@@ -95,8 +100,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_rec_loss_3:
-    type: "melspecdiff"
+  melspec_loss_3:
+    type: "melspec"
     weight: 1.0
     base_loss_type: 'l1'
     lin_start: 0.1
@@ -113,8 +118,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_rec_loss_4:
-    type: "melspecdiff"
+  melspec_loss_4:
+    type: "melspec"
     weight: 5.0
     base_loss_type: 'l1'
     lin_start: 0.5
@@ -131,8 +136,8 @@ loss:
       norm: "slaney"
       mel_scale: "htk"
 
-  melspec_rec_loss_5:
-    type: "melspecdiff"
+  melspec_loss_5:
+    type: "melspec"
     weight: 5.0
     base_loss_type: 'l1'
     lin_start: 0.1

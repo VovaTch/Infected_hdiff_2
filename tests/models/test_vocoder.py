@@ -2,7 +2,7 @@ import torch
 import pytest
 
 from models import build_diffwave_diffusion_vocoder, build_mel_spec_converter
-from models.vocoder import VocoderDiffusionModel
+from models.diffwave_vocoder import VocoderDiffusionModel
 from models.mel_spec_converters import MelSpecConverter
 from loss import build_loss_aggregator
 from utils.containers import MelSpecParameters

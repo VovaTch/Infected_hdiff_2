@@ -4,7 +4,7 @@ from loaders.build import build_mel_spec_module
 from loss.factory import build_loss_aggregator
 from models.build import build_diffwave_diffusion_vocoder, build_mel_spec_converter
 from models.mel_spec_converters import MelSpecConverter
-from models.vocoder import VocoderDiffusionModel
+from models.diffwave_vocoder import VocoderDiffusionModel
 from utils.containers import (
     LearningParameters,
     MelSpecParameters,

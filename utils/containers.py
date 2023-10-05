@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sized
 
 import torch
 
@@ -82,3 +82,15 @@ def parse_cfg_for_vocoder(
     dataset_params = MusicDatasetParameters(**cfg["dataset"])
     mel_spec_params = MelSpecParameters(**cfg["image_mel_spec_params"])
     return learning_params, dataset_params, mel_spec_params
+
+
+@dataclass
+class Res1DDecoderParameters:
+    hidden_size: int
+    input_channels: int
+    dim_change_sequence: list[int]
+    kernel_size: int
+    dilation_factor: int
+    num_res_block_conv: int
+    dilation_factor: int
+    dim_add_kernel_add: int = 0
