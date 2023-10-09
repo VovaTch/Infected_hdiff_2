@@ -1,6 +1,6 @@
 from typing import Any, Callable
-import torch
 
+import torch
 from torch.utils.data import TensorDataset, DataLoader
 import torchaudio
 import tqdm
@@ -10,6 +10,7 @@ from utils.containers import MelSpecParameters
 from utils.slices import create_slices_from_file
 
 
+@torch.no_grad()
 def predict_diffwave(
     cfg: dict[str, Any],
     read_mp3_file_path: str,
@@ -35,17 +36,17 @@ def predict_diffwave(
     slice_dataloader = DataLoader(slice_dataset, batch_size=batch_size)
     reconstructed_slice = torch.zeros(
         (0, full_file_slices.shape[1], full_file_slices.shape[2])
-    )
+    ).to(device)
     for batch in tqdm.tqdm(
         slice_dataloader, desc=f"Processing the music file {read_mp3_file_path}..."
     ):
         slice: torch.Tensor = batch[0].squeeze(1)
         mel_spec = mel_spec_converter.convert(slice).squeeze(1)
-        noisy_input = {"noisy_input": torch.randn_like(slice)}
+        noisy_input = {"noisy_slice": torch.randn_like(slice).float()}
         cond = {"mel_spec": mel_spec}
         reconstructed_slice_ind = model.denoise(noisy_input, cond)["denoised_slice"]
         reconstructed_slice = torch.cat(
-            (reconstructed_slice, reconstructed_slice_ind), dim=0
+            (reconstructed_slice, reconstructed_slice_ind.unsqueeze(1)), dim=0
         )
 
     long_reconstructed_slice = reconstructed_slice.view((1, -1))

@@ -28,5 +28,23 @@
             "console": "integratedTerminal",
             "justMyCode": false
         },
+        {
+            "name": "Python: Test Predict",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "-ph",
+                "predict",
+                "-m",
+                "diffwave",
+                "-rf",
+                "data/test_tracks/bhaalspawn.mp3",
+                "-wf",
+                "check.mp3"
+            ]
+        },
     ]
 }

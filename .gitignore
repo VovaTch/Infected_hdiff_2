@@ -166,4 +166,4 @@ weights/
 *.pt
 *.pth
 saved/
-sample_out.mp3
+*.mp3

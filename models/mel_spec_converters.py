@@ -40,7 +40,7 @@ class SimpleMelSpecConverter:
 
     def convert(self, slice: torch.Tensor) -> torch.Tensor:
         self.mel_spec = self.mel_spec.to(slice.device)
-        output = self.mel_spec(slice)
+        output = self.mel_spec(slice.float())
         return output
 
 
