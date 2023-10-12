@@ -36,6 +36,9 @@ class MelSpecLoss:
 
         Args:
             x (torch.Tensor): Input, will be flattened
+
+        Returns:
+            torch.Tensor: mel spectrogram of the input
         """
         lin_vector = torch.linspace(
             self.lin_start,
@@ -50,6 +53,16 @@ class MelSpecLoss:
     def __call__(
         self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
     ) -> torch.Tensor:
+        """
+        Forward method for the loss
+
+        Args:
+            estimation (dict[str, torch.Tensor]): Network estimation
+            target (dict[str, torch.Tensor]): Ground truth reference
+
+        Returns:
+            torch.Tensor: Loss
+        """
         pred_slice = estimation["slice"]
         target_slice = target["slice"]
 
@@ -64,6 +77,17 @@ class MelSpecLoss:
 
 
 def build_mel_spec_loss_from_cfg(name: str, loss_cfg: dict[str, Any]) -> MelSpecLoss:
+    """
+    Builds a mel-spectrogram loss object
+
+    Args:
+        name (str): loss name
+        loss_cfg (dict[str, Any]): loss config
+
+    Returns:
+        AlignLoss: mel-spectrogram loss object
+    """
+
     # Create mel spec converter
     mel_spec_params = MelSpecParameters(**loss_cfg["melspec_params"])
     mel_spec_converter = build_mel_spec_converter(
@@ -87,9 +111,24 @@ def build_mel_spec_loss_from_cfg(name: str, loss_cfg: dict[str, Any]) -> MelSpec
 
 
 class MelSpecDiffusionLoss(MelSpecLoss):
+    """
+    Mel-spectrogram loss object, used for diffusion models, where you predict the denoised output
+    and compute the loss for it. Inherits from the regular mel spec loss object
+    """
+
     def __call__(
         self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
     ) -> torch.Tensor:
+        """
+        Forward method for the loss. Computes the estimated final slice given noised slice and predicted noise.
+
+        Args:
+            estimation (dict[str, torch.Tensor]): Network estimation
+            target (dict[str, torch.Tensor]): Ground truth reference
+
+        Returns:
+            torch.Tensor: Loss
+        """
         target_slice = target["slice"]
         noisy_slice = target["noisy_slice"]
         noise_scale = target["noise_scale"]
@@ -107,6 +146,16 @@ class MelSpecDiffusionLoss(MelSpecLoss):
 def build_mel_spec_diff_loss_from_cfg(
     name: str, loss_cfg: dict[str, Any]
 ) -> MelSpecLoss:
+    """
+    Builds a diffusion mel-spectrogram loss object
+
+    Args:
+        name (str): loss name
+        loss_cfg (dict[str, Any]): loss config
+
+    Returns:
+        AlignLoss: diffusion mel-spectrogram loss object
+    """
     # Create mel spec converter
     mel_spec_params = MelSpecParameters(**loss_cfg["melspec_params"])
     mel_spec_converter = build_mel_spec_converter(

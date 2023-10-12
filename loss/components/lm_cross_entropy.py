@@ -38,5 +38,15 @@ class DecoderCrossEntropy:
 def build_lm_cross_entropy_from_cfg(
     name: str, loss_cfg: dict[str, Any]
 ) -> DecoderCrossEntropy:
+    """
+    Builds cross entropy loss for a language model
+
+    Args:
+        name (str): loss name
+        loss_cfg (dict[str, Any]): loss config
+
+    Returns:
+        AlignLoss: cross entropy loss object
+    """
     loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "ce")]
     return DecoderCrossEntropy(name, loss_cfg.get("weight", 1.0), loss_module)

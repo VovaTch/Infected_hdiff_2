@@ -29,6 +29,15 @@ from .reconstruction import (
 
 @dataclass
 class LossComponent(Protocol):
+    """
+    Loss component object protocol
+
+    Fields:
+        name (str): loss name
+        weight (float): loss relative weight for computation (e.g. weighted sum)
+        base_loss (nn.Module): base loss module specific for the loss
+    """
+
     name: str
     weight: float
     base_loss: nn.Module
@@ -36,7 +45,16 @@ class LossComponent(Protocol):
     def __call__(
         self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
     ) -> torch.Tensor:
-        """Call method for outputting the loss"""
+        """
+        Call method for outputting the loss
+
+        Args:
+            estimation (dict[str, torch.Tensor]): Network estimation
+            target (dict[str, torch.Tensor]): Ground truth reference
+
+        Returns:
+            torch.Tensor: loss
+        """
         ...
 
 
@@ -68,5 +86,13 @@ def register_component(
     new_component_factory: Callable[[str, dict[str, Any]], Any],
     type: str,
 ) -> None:
+    """
+    Registers a loss component with a factory method into the component and factory dictionaries
+
+    Args:
+        new_component (LossComponent): Loss component
+        new_component_factory (Callable[[str, dict[str, Any]], Any]): Loss component factory function/method
+        type (str): String describing the type, used to call the loss
+    """
     COMPONENTS[type] = new_component
     COMPONENT_FACTORIES[type] = new_component_factory

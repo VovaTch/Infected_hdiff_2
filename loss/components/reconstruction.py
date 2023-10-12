@@ -22,6 +22,16 @@ class RecLoss:
     def __call__(
         self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
     ) -> torch.Tensor:
+        """
+        Forward method for the loss
+
+        Args:
+            estimation (dict[str, torch.Tensor]): Network estimation
+            target (dict[str, torch.Tensor]): Ground truth reference
+
+        Returns:
+            torch.Tensor: Loss
+        """
         pred_slice = estimation["slice"]
         target_slice = target["slice"]
 
@@ -33,7 +43,19 @@ class RecLoss:
 
     def _phased_loss(
         self, estimation: torch.Tensor, target: torch.Tensor, phase_parameter: int = 10
-    ):
+    ) -> torch.Tensor:
+        """
+        Utility method for computing reconstruction loss for slices that are delayed or premature,
+        the reconstruction loss doesn't need often to be exact one-to-one. Computes the minimum of those losses.
+
+        Args:
+            estimation (torch.Tensor): Network estimation
+            target (torch.Tensor): Ground truth reference
+            phase_parameter (int, optional): How much to consider delay or prematureness. Defaults to 10.
+
+        Returns:
+            torch.Tensor: Computed loss
+        """
         loss_vector = torch.zeros(phase_parameter * 2).to(estimation.device)
         for idx in range(phase_parameter):
             if idx == 0:
@@ -52,6 +74,17 @@ class RecLoss:
 
 
 def build_rec_loss_from_cfg(name: str, loss_cfg: dict[str, Any]) -> RecLoss:
+    """
+    Builds a reconstruction loss object
+
+    Args:
+        name (str): loss name
+        loss_cfg (dict[str, Any]): loss config
+
+    Returns:
+        AlignLoss: Reconstruction loss object
+    """
+
     loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "mse")]
     transform_func = TRANSFORM_FUNCS[loss_cfg.get("transform_func", "none")]
     phase_parameter = loss_cfg.get("phase_parameter", 1)
@@ -77,6 +110,16 @@ class NoisePredLoss:
     def __call__(
         self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
     ) -> torch.Tensor:
+        """
+        Forward method for the loss
+
+        Args:
+            estimation (dict[str, torch.Tensor]): Network estimation
+            target (dict[str, torch.Tensor]): Ground truth reference
+
+        Returns:
+            torch.Tensor: Loss
+        """
         noise = target["noise"]
         noise_pred = estimation["noise_pred"]
 
@@ -86,6 +129,17 @@ class NoisePredLoss:
 def build_noise_pred_loss_from_cfg(
     name: str, loss_cfg: dict[str, Any]
 ) -> NoisePredLoss:
+    """
+    Builds a noise prediction loss object for diffusion
+
+    Args:
+        name (str): loss name
+        loss_cfg (dict[str, Any]): loss config
+
+    Returns:
+        AlignLoss: Prediction loss object
+    """
+
     loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "mse")]
     return NoisePredLoss(name, loss_cfg.get("weight", 1.0), loss_module)
 
@@ -103,6 +157,16 @@ class DiffReconstructionLoss:
     def __call__(
         self, estimation: dict[str, torch.Tensor], target: dict[str, torch.Tensor]
     ) -> torch.Tensor:
+        """
+        Forward method for the loss
+
+        Args:
+            estimation (dict[str, torch.Tensor]): Network estimation
+            target (dict[str, torch.Tensor]): Ground truth reference
+
+        Returns:
+            torch.Tensor: Loss
+        """
         target_slice = target["slice"]
         noisy_slice = target["noisy_slice"]
         noise_scale = target["noise_scale"]
@@ -120,5 +184,15 @@ class DiffReconstructionLoss:
 def build_diff_rec_loss_from_cfg(
     name: str, loss_cfg: dict[str, Any]
 ) -> DiffReconstructionLoss:
+    """
+    Builds a reconstruction loss object for diffusion
+
+    Args:
+        name (str): loss name
+        loss_cfg (dict[str, Any]): loss config
+
+    Returns:
+        AlignLoss: Diffusion reconstruction loss object
+    """
     loss_module = LOSS_MODULES[loss_cfg.get("base_loss", "mse")]
     return DiffReconstructionLoss(name, loss_cfg.get("weight", 1.0), loss_module)

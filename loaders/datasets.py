@@ -141,6 +141,7 @@ class MP3SliceDataset(Dataset):
         Returns:
             dict[str, Any]: Output dictionary contains the slice data and metadata from a file.
         """
+        print(f"loading {file}")
         long_data, sr = torchaudio.load(file, format="mp3")  # type: ignore
         long_data = self._resample_if_necessary(long_data, sr)
         long_data = self._mix_down_if_necessary(long_data)
