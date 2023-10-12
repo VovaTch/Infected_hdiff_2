@@ -116,9 +116,6 @@ class VocoderDiffusionModel(BaseDiffusionModel):
             return
         loss = self.loss_aggregator.compute(slice_outputs, updated_inputs)
 
-        for loss_key, loss_value in loss.individuals.items():
-            self.log(loss_key, loss_value)
-
         self._log_losses("validation", loss)
 
     def _step(
